@@ -89,9 +89,9 @@ FUNC(void, OS_CODE) os_shutdown_os(StatusType error_status)
 
 FUNC(void, OS_CODE) os_shutdown_all_cores(StatusType error_status)
 {
-	CoreIdType core_id = os_get_core_id();
+	// CoreIdType core_id = os_get_core_id();
 
-	uint32 core_mask = ((0x00000001U<<(uint32)OS_CORE_CNT) - 1U) & (~(0x00000001U<<(uint32)core_id));
+	// uint32 core_mask = ((0x00000001U<<(uint32)OS_CORE_CNT) - 1U) & (~(0x00000001U<<(uint32)core_id));
 
 	// os_ipicall_shutdown_all_cores(core_mask, error_status);
 
