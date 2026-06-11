@@ -40,6 +40,8 @@ static inline void os_core_sync_all_cores(Atomic *const sync_value_ref)
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
 
+#ifndef CONFIG_ARCH_RH850
+
 FUNC(void, OS_CODE) os_core_sync_phase_one(void)
 {
 	os_core_sync_all_cores(&g_coresync_flag_one);
@@ -92,6 +94,64 @@ FUNC(void, OS_CODE) os_shutdown_all_cores(StatusType error_status)
 
 	os_shutdown_core(error_status);
 }
+#else
+FUNC(void, OS_CODE) os_core_sync_phase_one(void)
+{
+	return ;
+	// os_core_sync_all_cores(&g_coresync_flag_one);
+}
 
+FUNC(void, OS_CODE) os_core_sync_phase_two(void)
+{
+	return ;
+	// os_core_sync_all_cores(&g_coresync_flag_two);
+}
+
+FUNC(void, OS_CODE) os_core_shutdown_sync(void)
+{
+	return ;
+	// os_core_sync_all_cores(&g_coreshutdown_sync);
+}
+
+FUNC(void, OS_CODE) os_shutdown_core(StatusType error_status)
+{
+	return ;
+	// os_int_disable_global();
+
+	//TODO: kill app
+
+#if defined(CONFIG_RT_FRAMEWORK_SHUTDOWN_HOOK) && (CONFIG_RT_FRAMEWORK_SHUTDOWN_HOOK == 1)
+	os_call_shutdown_hook(error_status);
+#else
+	(void)error_status;
+#endif
+
+	while (TRUE) {
+	}
+}
+
+FUNC(void, OS_CODE) os_shutdown_os(StatusType error_status)
+{
+	return ;
+	// const os_ctx_cfg_t *const current_context = os_context_get_contexthdl();
+
+	// if (UNLIKELY(FALSE == os_context_check_curcontext_id(current_context, OS_CONTEXT_SHUTDOWNOS))) {
+	// 	REPORT_PROTECTION_ERROR(E_OS_CALLEVEL);
+	// } else {
+	// 	os_shutdown_core(error_status);
+	// }
+}
+
+FUNC(void, OS_CODE) os_shutdown_all_cores(StatusType error_status)
+{
+	// CoreIdType core_id = os_get_core_id();
+
+	// uint32 core_mask = ((0x00000001U<<(uint32)OS_CORE_CNT) - 1U) & (~(0x00000001U<<(uint32)core_id));
+
+	// os_ipicall_shutdown_all_cores(core_mask, error_status);
+
+	os_shutdown_core(error_status);
+}
+#endif
 #define OS_STOP_SEC_CODE
 #include "rtfw_memmap.h"
