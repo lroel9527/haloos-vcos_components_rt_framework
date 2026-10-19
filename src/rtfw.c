@@ -26,6 +26,9 @@
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 #include "rtfw_schedtable.h"
 #endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_SPINLOCK) && (CONFIG_RT_FRAMEWORK_SPINLOCK == 1)
 #include "rtfw_spinlock.h"
 #endif
@@ -71,6 +74,9 @@ FUNC(void, OS_CODE) StartOS(void)
 #endif
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 	os_schedule_table_init(os_schedtable_cfg_ref_table, os_schedtable_cfg_ref_table_size);
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	os_alarm_init(os_alarm_cfg_ref_table, os_alarm_cfg_ref_table_size);
 #endif
 #endif /* CONFIG_RT_FRAMEWORK_MULTIAPP */
 

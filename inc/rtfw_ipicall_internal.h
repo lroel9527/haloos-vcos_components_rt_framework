@@ -133,6 +133,34 @@ struct os_ipicall_clear_schtbl_appid_param {
 	ApplicationIDType app_id;
 };
 #endif
+
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+struct os_ipicall_get_alarm_base_param {
+	AlarmType alarm_id;
+	AlarmBaseType alarm_base;
+};
+
+struct os_ipicall_get_alarm_param {
+	AlarmType alarm_id;
+	TickType tick;
+};
+
+struct os_ipicall_set_rel_alarm_param {
+	AlarmType alarm_id;
+	TickType increment;
+	TickType cycle;
+};
+
+struct os_ipicall_set_abs_alarm_param {
+	AlarmType alarm_id;
+	TickType start;
+	TickType cycle;
+};
+
+struct os_ipicall_cancel_alarm_param {
+	AlarmType alarm_id;
+};
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
 struct os_ipicall_test_param {
 	uint32 test_value;
@@ -165,6 +193,13 @@ union os_ipicall_param_e {
 	os_ipicall_deviate_schtbl_param_t deviate_schtbl_param;
 	os_ipicall_set_schtbl_appid_param_t set_schtbl_appid_param;
 	os_ipicall_clear_schtbl_appid_param_t clear_schtbl_appid_param;
+#endif /* #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1) */
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	os_ipicall_get_alarm_base_param_t get_alarm_base_param;
+	os_ipicall_get_alarm_param_t get_alarm_param;
+	os_ipicall_set_rel_alarm_param_t set_rel_alarm_param;
+	os_ipicall_set_abs_alarm_param_t set_abs_alarm_param;
+	os_ipicall_cancel_alarm_param_t cancel_alarm_param;
 #endif /* #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1) */
 #if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
 	os_ipicall_test_param_t ipc_test_param;
@@ -283,6 +318,24 @@ extern FUNC(os_status_t, OS_CODE) os_ipicall_get_event(uint32 target_core, TaskT
 extern FUNC(os_status_t, OS_CODE) os_ipicall_set_event(uint32 target_core, TaskType task_id, os_event_mask_t mask);
 extern FUNC(os_status_t, OS_CODE)
 	os_ipicall_set_event_asyn(uint32 target_core, TaskType task_id, os_event_mask_t mask);
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_get_alarm_base(os_ipicall_data_t *param);
+extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_get_alarm(os_ipicall_data_t *param);
+extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_set_rel_alarm(os_ipicall_data_t *param);
+extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_set_abs_alarm(os_ipicall_data_t *param);
+extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_cancel_alarm(os_ipicall_data_t *param);
+extern FUNC(os_status_t, OS_CODE)
+	os_ipicall_get_alarm_base(uint32 target_core, AlarmType alarm_id, AlarmBaseRefType info);
+extern FUNC(os_status_t, OS_CODE)
+	os_ipicall_get_alarm(uint32 target_core, AlarmType alarm_id, TickRefType tick);
+extern FUNC(os_status_t, OS_CODE)
+	os_ipicall_set_rel_alarm(uint32 target_core, AlarmType alarm_id, TickType increment,
+			     TickType cycle);
+extern FUNC(os_status_t, OS_CODE)
+	os_ipicall_set_abs_alarm(uint32 target_core, AlarmType alarm_id, TickType start, TickType cycle);
+extern FUNC(os_status_t, OS_CODE)
+	os_ipicall_cancel_alarm(uint32 target_core, AlarmType alarm_id);
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
 extern FUNC(os_status_t, OS_CODE) os_ipicall_recv_ipc_test_function(os_ipicall_data_t *param);
 extern FUNC(os_status_t, OS_CODE) os_ipicall_ipc_test_function(uint32 target_core, uint32 test_value);

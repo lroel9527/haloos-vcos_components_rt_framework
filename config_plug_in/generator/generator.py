@@ -113,6 +113,15 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     render_os_template(template, output_dir, "stack_cfg.h", config)
 
     # ################################################## #
+    #    ALARM                                           #
+    # ################################################## #
+    template = env_ui.get_template("alarm_cfg.h.jinja2")
+    render_os_template(template, output_dir, "alarm_cfg.h", config)
+
+    template = env_ui.get_template("alarm_cfg.c.jinja2")
+    render_os_template(template, output_dir, "alarm_cfg.c", config)
+
+    # ################################################## #
     #    APPLICATION                                     #
     # ################################################## #
     template = env_ui.get_template("application_cfg.h.jinja2")

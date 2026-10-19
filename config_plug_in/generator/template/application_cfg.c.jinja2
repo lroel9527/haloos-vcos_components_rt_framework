@@ -33,6 +33,9 @@
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 #include "schedtable_cfg.h"
 #endif /* (CONFIG_RT_FRAMEWORK_SCHTBL == 1) */
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "alarm_cfg.h"
+#endif /* (CONFIG_RT_FRAMEWORK_ALARM == 1) */
 #if defined(CONFIG_RT_FRAMEWORK_HOOK) && (CONFIG_RT_FRAMEWORK_HOOK == 1)
 #include "hook_cfg.h"
 #endif
@@ -83,6 +86,15 @@ DeclareOsApplication(OS_CONST_SECTION, {{app_cfg[bsw_appname]["AppInstSection"]}
     {%- else %}
     /* .counter_refs =            */ NULL_PTR,
     /* .counter_count =           */ NULL_PTR,
+    {%- endif %}
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+    {%- if app_val["AppAlarmList"] and app_val["AppAlarmList"]|length > 0 %}
+    /* .alarm_refs =              */ {{app_val["AppAlarmTable"]}},
+    /* .alarm_count =             */ &{{app_val["AppAlarmTable"]}}_size,
+    {%- else %}
+    /* .alarm_refs =              */ NULL_PTR,
+    /* .alarm_count =             */ NULL_PTR,
     {%- endif %}
 #endif
 #if defined(CONFIG_RT_FRAMEWORK_MEMORY_PROTECTION) && (CONFIG_RT_FRAMEWORK_MEMORY_PROTECTION == 1)

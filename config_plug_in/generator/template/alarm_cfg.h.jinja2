@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ * Licensed under the Apache License, Version 2.0(the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Description: Os Alarm Configuration
+ * AutoGenerate Code, DO NOT EDIT!!!
+ * {{get_generation_time()}}
+ * {{get_project_name()}}
+ * {{get_vcos_version()}}
+ */
+
+#ifndef RT_FRAMEWORK_INC_OS_ALARM_CFG_H
+#define RT_FRAMEWORK_INC_OS_ALARM_CFG_H
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+/* Including File */
+#include "rtfw_alarm.h"
+
+{%- set alarm_cfg = get_alarm_cfg() %}
+{%- set app_cfg = get_app_cfg() %}
+{%- set ns = namespace(counter=0) %}
+
+/* Global Enumeration Definition */
+typedef enum {
+{%- for app in app_cfg %}
+    {%- if app_cfg[app]["AppAlarmList"] %}
+        {%- for alarm_name in app_cfg[app]["AppAlarmList"] %}
+            {%- if alarm_name in alarm_cfg %}
+    {{alarm_cfg[alarm_name].AlarmId}} = {{ns.counter}},
+                {%- set ns.counter = ns.counter + 1 %}
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endfor %}
+    OS_ALARM_CNT = {{ns.counter}},
+    OS_ALARM_NONE = OS_ALARM_CNT
+} OS_ALARMID_DEF;
+
+/* Alarm Configuration Forward Declarations */
+{%- for alarm_name, alarm_val in alarm_cfg.items() %}
+extern const os_alarm_cfg_t ALARMCFGVAR({{alarm_name.upper()}}_CFG);
+{%- endfor %}
+
+{%- for app in app_cfg %}
+    {%- if app_cfg[app]["AppAlarmList"] %}
+
+#define OS_START_SEC_CONST
+#include "rtfw_memmap.h"
+extern CONSTP2CONST(os_alarm_cfg_t, OS_CONST, AUTOMATIC) {{app_cfg[app]["AppAlarmTable"]}}[];
+extern CONST(OsObjIndexType, OS_CONST) {{app_cfg[app]["AppAlarmTable"]}}_size;
+#define OS_STOP_SEC_CONST
+#include "rtfw_memmap.h"
+    {%- endif %}
+{%- endfor %}
+
+#define OS_START_SEC_CONST
+#include "rtfw_memmap.h"
+extern CONSTP2CONST(os_alarm_cfg_t, OS_CONST, AUTOMATIC) os_alarm_cfg_ref_table[];
+extern CONST(OsObjIndexType, OS_CONST) os_alarm_cfg_ref_table_size;
+#define OS_STOP_SEC_CONST
+#include "rtfw_memmap.h"
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif	 /* RT_FRAMEWORK_INC_OS_ALARM_CFG_H */
+

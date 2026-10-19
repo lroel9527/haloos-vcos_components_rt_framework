@@ -186,6 +186,39 @@
             }
         }
     },
+    "OS014001": {
+        "rule_name": "OS014001",
+        "rule_type": "same_container_linkage_check",
+        "rule_summary": "The linkage check of OsAlarmAutostartType and OsAlarmAlarmTime.",
+        "rule_message": "If OsAlarmAutostartType is 'RELATIVE', then OsAlarmAlarmTime must be between 0 and 4294967296.",
+        "rule_ruleset": {
+            "ruleset_01": {
+                "base_path": "/AUTOSAR/EcucDefs/Os/OsAlarm/OsAlarmAutostart",
+                "condition": [
+                    {
+                        "mod_path": "/AUTOSAR/EcucDefs/Os/OsAlarm/OsAlarmAutostart/OsAlarmAutostartType",
+                        "value_operator": "==",
+                        "value": "RELATIVE",
+                        "logical_operator": "and"
+                    }
+                ],
+                "judgement": [
+                    {
+                        "mod_path": "/AUTOSAR/EcucDefs/Os/OsAlarm/OsAlarmAutostart/OsAlarmAlarmTime",
+                        "value_operator": ">",
+                        "value": 0,
+                        "logical_operator": "and"
+                    },
+                    {
+                        "mod_path": "/AUTOSAR/EcucDefs/Os/OsAlarm/OsAlarmAutostart/OsAlarmAlarmTime",
+                        "value_operator": "<",
+                        "value": 4294967296,
+                        "logical_operator": "and"
+                    }
+                ]
+            }
+        }
+    },
     "OS013010": {
         "rule_name": "OS013010",
         "rule_type": "repeatability_check",
@@ -262,6 +295,16 @@
                     }
                 ]
             }
+        }
+    },
+    "OS014002": {
+        "rule_name": "OS014002",
+        "rule_type": "repeatability_check",
+        "rule_summary": "Repeatablity check of OsAppAlarmRef.",
+        "rule_message": "An Alarm must belong to one Application.",
+        "rule_ruleset": {
+            "mod_path": "/AUTOSAR/EcucDefs/Os/OsApplication/OsAppAlarmRef",
+            "base_path": "/AUTOSAR/EcucDefs/Os"
         }
     },
     "OS014003": {

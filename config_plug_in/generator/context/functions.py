@@ -194,6 +194,10 @@ class Function(FunctionBase):
                 "AppIsrTable": name.lower() + "_isr_cfg_ref_table",
                 "AppScheduleTableList": utils.resolve_ref_list("OsAppScheduleTableRef", value),
                 "AppSchedTblTable": name.lower() + "_schedtable_cfg_ref_table",
+                "AppAlarmList": utils.resolve_ref_list("OsAppAlarmRef", {
+                    "OsAppAlarmRef": value.get("OsAppAlarmRef", {"ValueRef": []})
+                }),
+                "AppAlarmTable": name.lower() + "_alarm_cfg_ref_table",
                 "AppHookTable": name.lower() + "_hook_cfg_ref_table",
                 "AppPrivileged": "TRUE" if value["OsIsPrivileged"]["Value"] else "FALSE",
                 "AppId": f"OS_CORE{app_coreid}_{name.upper()}_ID",
@@ -660,6 +664,147 @@ class Function(FunctionBase):
 
     @staticmethod
     @pass_context
+    @utils.cache_once(_cache)
+    def get_alarm_cfg(context):
+        """Get alarm configuration information"""
+        alarm_dict = Function.get_os_module_list(context, '/Os/OsAlarm')
+        all_alarm_cfg = {}
+        app_cfg = Function.get_app_cfg(context)
+
+        for name, value in alarm_dict.items():
+            # Ownership determines the execution core; access permissions do not.
+            access_apps = utils.resolve_ref_list("OsAlarmAccessingApplication", {
+                "OsAlarmAccessingApplication": value.get("OsAlarmAccessingApplication", {"ValueRef": []})
+            })
+            owners = [app for app, cfg in app_cfg.items() if name in cfg["AppAlarmList"]]
+            if len(owners) != 1:
+                raise ValueError(f"Alarm {name} must belong to exactly one OsApplication, found {owners}")
+            core_id = str(app_cfg[owners[0]]["CoreNumber"])
+            counter_ref = utils.get_last_item(value.get("OsAlarmCounterRef", {}).get("ValueRef", ""))
+            counters = Function.get_os_module_list(context, "/Os/OsCounter")
+            counter_owners = [app for app, cfg in app_cfg.items() if counter_ref in cfg["AppCounterList"]]
+            if counter_ref not in counters or len(counter_owners) != 1:
+                raise ValueError(f"Alarm {name} requires a valid OsAlarmCounterRef with one owner")
+            if str(app_cfg[counter_owners[0]]["CoreNumber"]) != core_id:
+                raise ValueError(f"Alarm {name} and counter {counter_ref} must be on the same core")
+
+            alarm_cfg = {
+                "AlarmAccessApp": access_apps,
+                "AlarmCounterRef": counter_ref,
+                "AlarmId": f"OS_ALARM_{name.upper()}_ID",
+                "AlarmActionType": "ALARM_ACTION_NONE",
+                "AlarmActivateTaskRef": "",
+                "AlarmSetEventRef": "",
+                "AlarmSetEventTaskRef": "",
+                "AlarmCallbackName": "",
+                "CoreID": core_id,
+                # Autostart configuration
+                "AlarmAutostart": "FALSE",
+                "AlarmAlarmTime": 0,
+                "AlarmCycleTime": 0,
+                "AlarmAutostartType": "OS_ALARM_START_ABSOLUTE",
+                "AlarmAppModeRef": "OSAUTOSTARTMODE"
+            }
+
+            # Parse autostart configuration
+            for subkey, subvalue in value.items():
+                if isinstance(subvalue, dict) and "DefinitionRef" in subvalue:
+                    if "/Os/OsAlarm/OsAlarmAutostart" in subvalue["DefinitionRef"]:
+                        # Get autostart mode reference
+                        if "OsAlarmAppModeRef" in subvalue and subvalue["OsAlarmAppModeRef"]["ValueRef"]:
+                            alarm_app_mode_refs = utils.resolve_ref_list("OsAlarmAppModeRef", subvalue)
+                            alarm_cfg["AlarmAppModeRef"] = alarm_app_mode_refs
+                            alarm_cfg["AlarmAutostart"] = "TRUE" if "OSAUTOSTARTMODE" in alarm_app_mode_refs else "FALSE"
+                        else:
+                            alarm_cfg["AlarmAutostart"] = "FALSE"
+
+                        if "OsAlarmAlarmTime" in subvalue:
+                            alarm_cfg["AlarmAlarmTime"] = subvalue["OsAlarmAlarmTime"]["Value"]
+
+                        if "OsAlarmCycleTime" in subvalue:
+                            alarm_cfg["AlarmCycleTime"] = subvalue["OsAlarmCycleTime"]["Value"]
+
+                        if "OsAlarmAutostartType" in subvalue:
+                            autostart_type = subvalue["OsAlarmAutostartType"]["Value"]
+                            if "RELATIVE" in autostart_type:
+                                alarm_cfg["AlarmAutostartType"] = "OS_ALARM_START_RELATIVE"
+                            else:
+                                alarm_cfg["AlarmAutostartType"] = "OS_ALARM_START_ABSOLUTE"
+
+            # Parse alarm action
+            action_count = 0
+            for subkey, subvalue in value.items():
+                if isinstance(subvalue, dict) and "DefinitionRef" in subvalue:
+                    if "/Os/OsAlarm/OsAlarmAction" in subvalue["DefinitionRef"]:
+                        # Look for action sub-containers
+                        for action_key, action_value in subvalue.items():
+                            if isinstance(action_value, dict) and "DefinitionRef" in action_value:
+                                # ActivateTask action
+                                if "/Os/OsAlarm/OsAlarmAction/OsAlarmActivateTask" in action_value["DefinitionRef"]:
+                                    alarm_cfg["AlarmActionType"] = "ALARM_ACTION_ACTIVATETASK"
+                                    action_count += 1
+                                    if "OsAlarmActivateTaskRef" in action_value and action_value["OsAlarmActivateTaskRef"]["ValueRef"]:
+                                        alarm_cfg["AlarmActivateTaskRef"] = utils.get_last_item(action_value["OsAlarmActivateTaskRef"]["ValueRef"])
+
+                                # SetEvent action
+                                elif "/Os/OsAlarm/OsAlarmAction/OsAlarmSetEvent" in action_value["DefinitionRef"]:
+                                    alarm_cfg["AlarmActionType"] = "ALARM_ACTION_SETEVENT"
+                                    action_count += 1
+                                    if "OsAlarmSetEventRef" in action_value and action_value["OsAlarmSetEventRef"]["ValueRef"]:
+                                        alarm_cfg["AlarmSetEventRef"] = utils.get_last_item(action_value["OsAlarmSetEventRef"]["ValueRef"])
+                                    if "OsAlarmSetEventTaskRef" in action_value and action_value["OsAlarmSetEventTaskRef"]["ValueRef"]:
+                                        alarm_cfg["AlarmSetEventTaskRef"] = utils.get_last_item(action_value["OsAlarmSetEventTaskRef"]["ValueRef"])
+
+                                # Callback action
+                                elif "/Os/OsAlarm/OsAlarmAction/OsAlarmCallback" in action_value["DefinitionRef"]:
+                                    alarm_cfg["AlarmActionType"] = "ALARM_ACTION_ALARMCALLBACK"
+                                    action_count += 1
+                                    if "OsAlarmCallbackName" in action_value and action_value["OsAlarmCallbackName"]["Value"]:
+                                        alarm_cfg["AlarmCallbackName"] = action_value["OsAlarmCallbackName"]["Value"]
+
+            if action_count != 1:
+                raise ValueError(f"Alarm {name} must configure exactly one supported OsAlarmAction")
+            if alarm_cfg["AlarmActionType"] == "ALARM_ACTION_ACTIVATETASK":
+                target_task = alarm_cfg["AlarmActivateTaskRef"]
+            elif alarm_cfg["AlarmActionType"] == "ALARM_ACTION_SETEVENT":
+                target_task = alarm_cfg["AlarmSetEventTaskRef"]
+                events = Function.get_os_module_list(context, "/Os/OsEvent")
+                if alarm_cfg["AlarmSetEventRef"] not in events:
+                    raise ValueError(f"Alarm {name} requires a valid OsAlarmSetEventRef")
+            else:
+                target_task = None
+                if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", alarm_cfg["AlarmCallbackName"]):
+                    raise ValueError(f"Alarm {name} requires a valid OsAlarmCallbackName")
+            if target_task is not None and target_task not in Function.get_os_module_list(context, "/Os/OsTask"):
+                raise ValueError(f"Alarm {name} requires a valid task reference")
+
+            all_alarm_cfg[name] = alarm_cfg
+
+        return all_alarm_cfg
+
+    @staticmethod
+    @pass_context
+    @utils.cache_once(_cache)
+    def get_core_referenced_alarm(context):
+        """Get alarm list referenced by each core"""
+        alarm_cfg = Function.get_alarm_cfg(context)
+        core_alarm_map = {}
+
+        # Initialize empty alarm list for all cores
+        core_cnt = Function.get_core_cnt(context)
+        for core_id in range(core_cnt):
+            core_alarm_map[str(core_id)] = []
+
+        # Assign alarms to corresponding cores
+        for alarm_name, alarm_info in alarm_cfg.items():
+            core_id = alarm_info["CoreID"]
+            if core_id in core_alarm_map:
+                core_alarm_map[core_id].append(alarm_name)
+
+        return core_alarm_map
+
+    @staticmethod
+    @pass_context
     def get_event_cfg(context):
         event_cfg = {}
         task_cfg = Function.get_task_cfg(context)
@@ -757,6 +902,7 @@ class Function(FunctionBase):
         counter_list = Function.get_os_module_list(context, "/Os/OsCounter")
         app_cfg = Function.get_app_cfg(context)
         schedtable_cfg = Function.get_schedtable_cfg(context)
+        alarm_cfg = Function.get_alarm_cfg(context)
         counter_cfg = {}
         action_cnt = {}
 
@@ -765,6 +911,14 @@ class Function(FunctionBase):
                 if schedtable_name in schedtable_cfg:
                     if schedtable_cfg[schedtable_name]["OsScheduleTableCounterRef"]:
                         ref_counter_name = schedtable_cfg[schedtable_name]["OsScheduleTableCounterRef"]
+                        if ref_counter_name not in action_cnt.keys():
+                            action_cnt[ref_counter_name] = 0
+                        action_cnt[ref_counter_name] = action_cnt[ref_counter_name] + 1
+
+            for alarm_name in app_value["AppAlarmList"]:
+                if alarm_name in alarm_cfg:
+                    if alarm_cfg[alarm_name]["AlarmCounterRef"]:
+                        ref_counter_name = alarm_cfg[alarm_name]["AlarmCounterRef"]
                         if ref_counter_name not in action_cnt.keys():
                             action_cnt[ref_counter_name] = 0
                         action_cnt[ref_counter_name] = action_cnt[ref_counter_name] + 1
@@ -1508,6 +1662,13 @@ class Function(FunctionBase):
         counter_cfg = Function.get_counter_cfg(context)
         if counter_cfg:
             rtfw_config.append("CONFIG_RT_FRAMEWORK_COUNTER=y")
+        ########################################################
+
+        # CONFIG_RT_FRAMEWORK_ALARM
+        ########################################################
+        alarm_cfg = Function.get_alarm_cfg(context)
+        if alarm_cfg:
+            rtfw_config.append("CONFIG_RT_FRAMEWORK_ALARM=y")
         ########################################################
 
         # CONFIG_RT_FRAMEWORK_MEMPOOL

@@ -108,6 +108,11 @@ config RT_FRAMEWORK_COUNTER
 	---help---
 		Enable RT_FRAMEWORK_COUNTER
 
+config RT_FRAMEWORK_ALARM
+	bool "RT_FRAMEWORK_ALARM"
+	default n
+	---help---
+		Enable RT_FRAMEWORK_ALARM
 config RT_FRAMEWORK_MEMPOOL
 	bool "RT_FRAMEWORK_MEMPOOL"
 	default n

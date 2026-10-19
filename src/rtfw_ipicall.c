@@ -20,6 +20,9 @@
 #include "string.h"
 #include "rtfw_counter.h"
 #include "rtfw_core.h"
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm_internal.h"
+#endif
 #include "rtfw_task.h"
 #if defined(CONFIG_RT_FRAMEWORK_HOOK) && (CONFIG_RT_FRAMEWORK_HOOK == 1)
 #include "rtfw_hook.h"
@@ -53,13 +56,23 @@
 #define OS_IPICALL_SET_SCHEDULE_TABLE_APP_ID ((os_ipicall_service_id_t)17)
 #define OS_IPICALL_CLEAR_SCHEDULE_TABLE_APP_ID ((os_ipicall_service_id_t)18)
 #define OS_IPICALL_GETTASKSTATE ((os_ipicall_service_id_t)19)
-#if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
-#define OS_IPICALL_IPC_TEST_FUNCTION ((os_ipicall_service_id_t)20)
-#define OS_IPICALL_SHUTDOWN_ALL_CORES ((os_ipicall_service_id_t)21)
-#define OS_IPICALL_SERVICE_MAX ((os_ipicall_service_id_t)22)
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#define OS_IPICALL_GETALARMBASE ((os_ipicall_service_id_t)20)
+#define OS_IPICALL_GETALARM ((os_ipicall_service_id_t)21)
+#define OS_IPICALL_SETRELALARM ((os_ipicall_service_id_t)22)
+#define OS_IPICALL_SETABSALARM ((os_ipicall_service_id_t)23)
+#define OS_IPICALL_CANCELALARM ((os_ipicall_service_id_t)24)
+#define OS_IPICALL_NEXT_SERVICE_ID 25U
 #else
-#define OS_IPICALL_SHUTDOWN_ALL_CORES ((os_ipicall_service_id_t)20)
-#define OS_IPICALL_SERVICE_MAX ((os_ipicall_service_id_t)21)
+#define OS_IPICALL_NEXT_SERVICE_ID 20U
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
+#if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
+#define OS_IPICALL_IPC_TEST_FUNCTION ((os_ipicall_service_id_t)OS_IPICALL_NEXT_SERVICE_ID)
+#define OS_IPICALL_SHUTDOWN_ALL_CORES ((os_ipicall_service_id_t)(OS_IPICALL_NEXT_SERVICE_ID + 1U))
+#define OS_IPICALL_SERVICE_MAX ((os_ipicall_service_id_t)(OS_IPICALL_NEXT_SERVICE_ID + 2U))
+#else
+#define OS_IPICALL_SHUTDOWN_ALL_CORES ((os_ipicall_service_id_t)OS_IPICALL_NEXT_SERVICE_ID)
+#define OS_IPICALL_SERVICE_MAX ((os_ipicall_service_id_t)(OS_IPICALL_NEXT_SERVICE_ID + 1U))
 #endif
 
 #define OS_START_SEC_CONST
@@ -91,6 +104,13 @@ os_ipicall_service_table[OS_IPICALL_SERVICE_MAX] = {
 	[OS_IPICALL_CLEAR_SCHEDULE_TABLE_APP_ID] = &os_ipicall_recv_clear_schedule_table_app_id,
 #endif
 	[OS_IPICALL_GETTASKSTATE] = &os_ipicall_recv_get_task_state,
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	[OS_IPICALL_GETALARMBASE] = &os_ipicall_recv_get_alarm_base,
+	[OS_IPICALL_GETALARM] = &os_ipicall_recv_get_alarm,
+	[OS_IPICALL_SETRELALARM] = &os_ipicall_recv_set_rel_alarm,
+	[OS_IPICALL_SETABSALARM] = &os_ipicall_recv_set_abs_alarm,
+	[OS_IPICALL_CANCELALARM] = &os_ipicall_recv_cancel_alarm,
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
 	[OS_IPICALL_IPC_TEST_FUNCTION] = &os_ipicall_recv_ipc_test_function,
 #endif
@@ -408,7 +428,6 @@ static FUNC(void, OS_CODE) os_ipicall_isr_handler(void)
 				com_data.send_element.service = ipicall_send_ptr->service;
 				com_data.send_element.in_param = ipicall_send_ptr->in_param;
 				com_data.send_element.send_app_id = ipicall_send_ptr->send_app_id;
-				ipicall_service = ipicall_cfg->service_ref[com_data.send_element.service];
 
 				if (com_data.send_element.service < OS_IPICALL_SERVICE_MAX) {
 					ipicall_service = ipicall_cfg->service_ref[com_data.send_element.service];
@@ -954,6 +973,140 @@ FUNC(os_status_t, OS_CODE) os_ipicall_hook_call_void_hook(uint32 target_core, Ho
 }
 #endif
 
+
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+/*! GetAlarmBase */
+FUNC(os_status_t, OS_CODE) os_ipicall_recv_get_alarm_base(os_ipicall_data_t *param)
+{
+	AlarmBaseType alarm_base;
+	os_status_t status;
+	AlarmType alarm_id;
+
+	alarm_id = param->send_element.in_param.get_alarm_base_param.alarm_id;
+	status = os_get_alarm_base(alarm_id, &alarm_base);
+	if (status == OS_STATUS_OK) {
+		param->ret_element.out_param.get_alarm_base_param.alarm_base = alarm_base;
+	}
+
+	return status;
+}
+
+/*! GetAlarm */
+FUNC(os_status_t, OS_CODE) os_ipicall_recv_get_alarm(os_ipicall_data_t *param)
+{
+	TickType tick;
+	os_status_t status;
+	AlarmType alarm_id;
+
+	alarm_id = param->send_element.in_param.get_alarm_param.alarm_id;
+	status = os_get_alarm(alarm_id, &tick);
+	if (status == OS_STATUS_OK) {
+		param->ret_element.out_param.get_alarm_param.tick = tick;
+	}
+
+	return status;
+}
+
+/*! SetRelAlarm */
+FUNC(os_status_t, OS_CODE) os_ipicall_recv_set_rel_alarm(os_ipicall_data_t *param)
+{
+	return os_set_rel_alarm(param->send_element.in_param.set_rel_alarm_param.alarm_id,
+				param->send_element.in_param.set_rel_alarm_param.increment,
+				param->send_element.in_param.set_rel_alarm_param.cycle);
+}
+
+/*! SetAbsAlarm */
+FUNC(os_status_t, OS_CODE) os_ipicall_recv_set_abs_alarm(os_ipicall_data_t *param)
+{
+	return os_set_abs_alarm(param->send_element.in_param.set_abs_alarm_param.alarm_id,
+				param->send_element.in_param.set_abs_alarm_param.start,
+				param->send_element.in_param.set_abs_alarm_param.cycle);
+}
+
+/*! CancelAlarm */
+FUNC(os_status_t, OS_CODE) os_ipicall_recv_cancel_alarm(os_ipicall_data_t *param)
+{
+	return os_cancel_alarm(param->send_element.in_param.cancel_alarm_param.alarm_id);
+}
+
+/*! ipicall send functions for Alarm APIs */
+FUNC(os_status_t, OS_CODE)
+os_ipicall_get_alarm_base(uint32 target_core, AlarmType alarm_id, AlarmBaseRefType info)
+{
+	os_status_t status;
+	os_ipicall_data_t param;
+
+	param.send_element.service = OS_IPICALL_GETALARMBASE;
+	param.send_element.in_param.get_alarm_base_param.alarm_id = alarm_id;
+	param.ret_element.return_status = OS_STATUS_NOT_OK;
+
+	status = os_ipicall_send_sync(target_core, &param);
+	if (status == OS_STATUS_OK) {
+		*info = param.ret_element.out_param.get_alarm_base_param.alarm_base;
+	}
+
+	return status;
+}
+
+FUNC(os_status_t, OS_CODE)
+os_ipicall_get_alarm(uint32 target_core, AlarmType alarm_id, TickRefType tick)
+{
+	os_status_t status;
+	os_ipicall_data_t param;
+
+	param.send_element.service = OS_IPICALL_GETALARM;
+	param.send_element.in_param.get_alarm_param.alarm_id = alarm_id;
+	param.ret_element.return_status = OS_STATUS_NOT_OK;
+
+	status = os_ipicall_send_sync(target_core, &param);
+	if (status == OS_STATUS_OK) {
+		*tick = param.ret_element.out_param.get_alarm_param.tick;
+	}
+
+	return status;
+}
+
+FUNC(os_status_t, OS_CODE)
+os_ipicall_set_rel_alarm(uint32 target_core, AlarmType alarm_id,
+			 TickType increment, TickType cycle)
+{
+	os_ipicall_data_t param;
+
+	param.send_element.service = OS_IPICALL_SETRELALARM;
+	param.send_element.in_param.set_rel_alarm_param.alarm_id = alarm_id;
+	param.send_element.in_param.set_rel_alarm_param.increment = increment;
+	param.send_element.in_param.set_rel_alarm_param.cycle = cycle;
+	param.ret_element.return_status = OS_STATUS_NOT_OK;
+
+	return os_ipicall_send_sync(target_core, &param);
+}
+
+FUNC(os_status_t, OS_CODE)
+os_ipicall_set_abs_alarm(uint32 target_core, AlarmType alarm_id,
+			  TickType start, TickType cycle)
+{
+	os_ipicall_data_t param;
+
+	param.send_element.service = OS_IPICALL_SETABSALARM;
+	param.send_element.in_param.set_abs_alarm_param.alarm_id = alarm_id;
+	param.send_element.in_param.set_abs_alarm_param.start = start;
+	param.send_element.in_param.set_abs_alarm_param.cycle = cycle;
+	param.ret_element.return_status = OS_STATUS_NOT_OK;
+
+	return os_ipicall_send_sync(target_core, &param);
+}
+
+FUNC(os_status_t, OS_CODE) os_ipicall_cancel_alarm(uint32 target_core, AlarmType alarm_id)
+{
+	os_ipicall_data_t param;
+
+	param.send_element.service = OS_IPICALL_CANCELALARM;
+	param.send_element.in_param.cancel_alarm_param.alarm_id = alarm_id;
+	param.ret_element.return_status = OS_STATUS_NOT_OK;
+
+	return os_ipicall_send_sync(target_core, &param);
+}
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 FUNC(os_status_t, OS_CODE) os_ipicall_shutdown_all_cores(uint32 target_core_mask, StatusType error_status)
 {
 	os_ipicall_data_t param;

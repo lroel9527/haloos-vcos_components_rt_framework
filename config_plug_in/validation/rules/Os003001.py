@@ -19,7 +19,7 @@ from durable.engine import *
 from .Os_ruleutils import OsRuleutils
 
 class Os003001Rule(BasicRule):
-    """Application/Task/Counter/Event/Resource/Isr name长度范围[1,127]"""
+    """Alarm/Application/Task/Counter/Event/Resource/Isr name长度范围[1,127]"""
     ruleset_name = "Os003001"
     validation_result = False
 
@@ -28,7 +28,7 @@ class Os003001Rule(BasicRule):
         self.logs = logs
         self.ecuc_os_dict = validation_data.bsw_ecuc_dict['Os']['ArPackages']['ActiveEcuC']['Os']
         self.validation_code = self.__class__.ruleset_name
-        self.validation_summary = "Length of Application/Task/Counter/Event/Resource/Isr name is [1,127]"
+        self.validation_summary = "Length of Alarm/Application/Task/Counter/Event/Resource/Isr name is [1,127]"
         self.durable_init()
 
     def durable_init(self):
@@ -44,6 +44,7 @@ class Os003001Rule(BasicRule):
 
     @timing_decorator
     def validation_run(self):
+        alarm_name_dict = list(OsRuleutils().get_module_cfg("OsAlarm",self.ecuc_os_dict).keys())
         app_name_dict = list(OsRuleutils().get_module_cfg("OsApplication",self.ecuc_os_dict).keys())
         task_name_dict = list(OsRuleutils().get_module_cfg("OsTask",self.ecuc_os_dict).keys())
         counter_name_dict = list(OsRuleutils().get_module_cfg("OsCounter",self.ecuc_os_dict).keys())
@@ -52,6 +53,7 @@ class Os003001Rule(BasicRule):
         isr_name_dict = list(OsRuleutils().get_module_cfg("OsIsr",self.ecuc_os_dict).keys())
         validation_data = {}
         param_path = "/ActiveEcuC/Os/"
+        validation_data.update({"alarm": alarm_name_dict})
         validation_data.update({"application": app_name_dict})
         validation_data.update({"task": task_name_dict})
         validation_data.update({"counter": counter_name_dict})

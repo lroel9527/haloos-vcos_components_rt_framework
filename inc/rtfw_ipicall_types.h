@@ -81,6 +81,23 @@ typedef struct os_ipicall_set_schtbl_appid_param os_ipicall_set_schtbl_appid_par
 struct os_ipicall_clear_schtbl_appid_param;
 typedef struct os_ipicall_clear_schtbl_appid_param os_ipicall_clear_schtbl_appid_param_t;
 #endif
+
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+struct os_ipicall_get_alarm_base_param;
+typedef struct os_ipicall_get_alarm_base_param os_ipicall_get_alarm_base_param_t;
+
+struct os_ipicall_get_alarm_param;
+typedef struct os_ipicall_get_alarm_param os_ipicall_get_alarm_param_t;
+
+struct os_ipicall_set_rel_alarm_param;
+typedef struct os_ipicall_set_rel_alarm_param os_ipicall_set_rel_alarm_param_t;
+
+struct os_ipicall_set_abs_alarm_param;
+typedef struct os_ipicall_set_abs_alarm_param os_ipicall_set_abs_alarm_param_t;
+
+struct os_ipicall_cancel_alarm_param;
+typedef struct os_ipicall_cancel_alarm_param os_ipicall_cancel_alarm_param_t;
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #if defined(CONFIG_RT_FRAMEWORK_IPICALL_TEST) && (CONFIG_RT_FRAMEWORK_IPICALL_TEST == 1)
 struct os_ipicall_test_param;
 typedef struct os_ipicall_test_param os_ipicall_test_param_t;

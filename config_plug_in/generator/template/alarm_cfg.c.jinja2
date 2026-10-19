@@ -1,0 +1,141 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ * Licensed under the Apache License, Version 2.0(the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Description: Os Alarm Configuration
+ * AutoGenerate Code, DO NOT EDIT!!!
+ * {{get_generation_time()}}
+ * {{get_project_name()}}
+ * {{get_vcos_version()}}
+ */
+
+/* Including File */
+#include <nuttx/config.h>
+#include "alarm_cfg.h"
+#include "rtfw_alarm.h"
+#include "rtfw_compiler_cfg.h"
+#include "application_cfg.h"
+#include "event_cfg.h"
+#include "task_cfg.h"
+#include "counter_cfg.h"
+#include "rtfw_core.h"
+
+{%- set alarm_cfg = get_alarm_cfg() %}
+{%- set counter_cfg = get_counter_cfg() %}
+{%- set system_counter_list = get_system_counter_list() %}
+{%- set app_cfg = get_app_cfg() %}
+
+/* Forward declarations for callback functions */
+{%- for alarm_name, alarm_val in alarm_cfg.items() %}
+    {%- if alarm_val.AlarmActionType == "ALARM_ACTION_ALARMCALLBACK" and alarm_val.AlarmCallbackName and alarm_val.AlarmCallbackName != "" %}
+extern void {{alarm_val.AlarmCallbackName}}(void);
+    {%- endif %}
+{%- endfor %}
+
+/* Alarm Configuration Definitions */
+{%- for app in app_cfg %}
+    {%- if app_cfg[app]["AppAlarmList"] %}
+        {%- for alarm_name in app_cfg[app]["AppAlarmList"] %}
+            {%- if alarm_name in alarm_cfg %}
+                {%- set alarm_val = alarm_cfg[alarm_name] %}
+                {%- set bsw_appname = app_cfg[app]["BswAppName"] %}
+/* {{alarm_name}} instance */
+DeclareAlarm(OS_CONST_SECTION, {{app_cfg[bsw_appname]["AppInstSection"]}}, {{alarm_name.upper()}}_CFG) = {
+    /* .obj_desc =                 */ &ALARMOBJVAR({{alarm_name.upper()}}_CFG),
+    /* .alarm_id =                 */ {{alarm_val.AlarmId}},
+    /* .alarm_name =               */ "{{alarm_name}}",
+{%- if alarm_val.AlarmActionType == "ALARM_ACTION_SETEVENT" %}
+    /* .action_type =              */ ALARM_ACTION_SETEVENT,
+    /* .action_attr =              */
+    {
+       /* .event =         */.event = {
+            /* .task =             */ OS_TASK_{{alarm_val.AlarmSetEventTaskRef.upper()}}_ID,
+            /* .mask =             */ {{alarm_val.AlarmSetEventRef.upper()}},
+        }
+    },
+{%- elif alarm_val.AlarmActionType == "ALARM_ACTION_ACTIVATETASK" %}
+    /* .action_type =              */ ALARM_ACTION_ACTIVATETASK,
+    /* .action_attr =              */
+    {
+        /* .task =          */.task = OS_TASK_{{alarm_val.AlarmActivateTaskRef.upper()}}_ID,
+    },
+{%- elif alarm_val.AlarmActionType == "ALARM_ACTION_ALARMCALLBACK" %}
+    /* .action_type =              */ ALARM_ACTION_ALARMCALLBACK,
+    /* .action_attr =              */
+    {
+       /* .callback_function = */.callback_function = &{{alarm_val.AlarmCallbackName}},
+    },
+{%- endif %}
+    /* .action_config =            */
+    {
+        /* .hrtimer =              */ &ALARMOBJVAR({{alarm_name.upper()}}_CFG).hrtimer,
+        /* .counter =              */ (os_counter_cfg_t*)&COUNTERCFGVAR({{alarm_val.AlarmCounterRef}}_cfg),
+{%- if alarm_val.AlarmActionType == "ALARM_ACTION_SETEVENT" %}
+        /* .action_callback =      */ &alarm_set_event_func,
+{%- elif alarm_val.AlarmActionType == "ALARM_ACTION_ACTIVATETASK" %}
+        /* .action_callback =      */ &alarm_activate_task_func,
+{%- elif alarm_val.AlarmActionType == "ALARM_ACTION_ALARMCALLBACK" %}
+        /* .action_callback =      */ &alarm_callback_func,
+{%- else %}
+        /* .action_callback =      */ NULL_PTR,
+{%- endif %}
+    },
+    /* .autostart =                */
+    {
+        /* .alarm_time =           */ {{alarm_val.AlarmAlarmTime}},
+        /* .cycle_time =           */ {{alarm_val.AlarmCycleTime}},
+        /* .autostart_type =       */ {{alarm_val.AlarmAutostartType}},
+        /* .autostart_mode =       */ {{alarm_val.AlarmAutostart}},
+    },
+#if defined(CONFIG_RT_FRAMEWORK_MULTIAPP) && (CONFIG_RT_FRAMEWORK_MULTIAPP == 1)
+    /* .app_owner_id =             */ {{app_cfg[app]["AppId"]}},
+{%- set access_app = alarm_val.AlarmAccessApp + [app] %}
+{%- set access_str = get_access_app_mask(access_app, index_size=39) %}
+    /* .access_app_mask =          */ ({{access_str}}),
+#endif
+};
+            {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{%- endfor %}
+
+/* Alarm Reference Tables by Application */
+#define OS_START_SEC_CONST
+#include "rtfw_memmap.h"
+{%- for app in app_cfg %}
+    {%- if app_cfg[app]["AppAlarmList"] %}
+
+CONSTP2CONST(os_alarm_cfg_t, OS_CONST, AUTOMATIC) {{app_cfg[app]["AppAlarmTable"]}}[] = {
+        {%- for alarm_name in app_cfg[app]["AppAlarmList"] %}
+            {%- if alarm_name in alarm_cfg %}
+    (os_alarm_cfg_t*) &ALARMCFGVAR({{alarm_name.upper()}}_CFG),
+            {%- endif %}
+        {%- endfor %}
+};
+
+CONST(OsObjIndexType, OS_CONST) {{app_cfg[app]["AppAlarmTable"]}}_size = (OsObjIndexType)NELEMENTS({{app_cfg[app]["AppAlarmTable"]}});
+    {%- endif %}
+{%- endfor %}
+
+/* Global alarm configuration reference table */
+DeclareRtfwRefTable(OS_CONST_SECTION, alarm, OS_ALARM_CNT) = {
+{%- for alarm_name, alarm_val in alarm_cfg.items() %}
+    [{{alarm_val.AlarmId}}] = &ALARMCFGVAR({{alarm_name.upper()}}_CFG),
+{%- endfor %}
+};
+
+#define OS_STOP_SEC_CONST
+#include "rtfw_memmap.h"
+

@@ -19,7 +19,7 @@ from durable.engine import *
 from .Os_ruleutils import OsRuleutils
 
 class Os002003Rule(BasicRule):
-    """Task/Spinlock/Counter/Resource/ScheduleTable的AccessingApplication个数[0,31]"""
+    """Alarm/Task/Spinlock/Counter/Resource/ScheduleTable的AccessingApplication个数[0,31]"""
     ruleset_name = "Os002003"
     validation_result = False
 
@@ -28,7 +28,7 @@ class Os002003Rule(BasicRule):
         self.logs = logs
         self.ecuc_os_dict = validation_data.bsw_ecuc_dict['Os']['ArPackages']['ActiveEcuC']['Os']
         self.validation_code = self.__class__.ruleset_name
-        self.validation_summary = "Ranges of AccessingApplication is [0,31] for Task/Spinlock/Counter/Resource/ScheduleTable"
+        self.validation_summary = "Ranges of AccessingApplication is [0,31] for Alarm/Task/Spinlock/Counter/Resource/ScheduleTable"
         self.durable_init()
 
     def durable_init(self):
@@ -44,6 +44,7 @@ class Os002003Rule(BasicRule):
 
     @timing_decorator
     def validation_run(self):
+        alarm_AccessingApplication_list = OsRuleutils().get_module_all_property_valueref("OsAlarm", "OsAlarmAccessingApplication", self.ecuc_os_dict)
         task_AccessingApplication_list = OsRuleutils().get_module_all_property_valueref("OsTask", "OsTaskAccessingApplication", self.ecuc_os_dict)
         counter_AccessingApplication_list = OsRuleutils().get_module_all_property_valueref("OsCounter", "OsCounterAccessingApplication", self.ecuc_os_dict)
         resource_AccessingApplication_list = OsRuleutils().get_module_all_property_valueref("OsResource", "OsResourceAccessingApplication", self.ecuc_os_dict)
@@ -51,6 +52,7 @@ class Os002003Rule(BasicRule):
         SchTbl_AccessingApplication_list = OsRuleutils().get_module_all_property_valueref("OsScheduleTable", "OsSchTblAccessingApplication", self.ecuc_os_dict)
         validation_data = {}
         param_path = "/ActiveEcuC/Os/"
+        validation_data.update({"alarm": alarm_AccessingApplication_list})
         validation_data.update({"task": task_AccessingApplication_list})
         validation_data.update({"counter": counter_AccessingApplication_list})
         validation_data.update({"spinlock": spinlock_AccessingApplication_list})
