@@ -30,6 +30,7 @@
 
 #include "rtfw_ipicall.h"
 #include "rtfw_event.h"
+#include "rtfw_trace.h"
 
 #if defined(CONFIG_RT_FRAMEWORK_MULTIAPP) && (CONFIG_RT_FRAMEWORK_MULTIAPP == 1)
 #include "rtfw_application.h"
@@ -481,6 +482,7 @@ FUNC(os_status_t, OS_CODE) os_ipicall_recv_activate_task(os_ipicall_data_t *para
 		return OS_STATUS_NOT_ACCESSIBLE;
 	}
 #endif
+	OS_TRACE_TASK_ACTIVATE(task_cfg);
 	ret = nxsem_post(&(task_inst->thread.act_sem));
 	if (ret == -EOVERFLOW) {
 		return OS_STATUS_LIMIT;
@@ -513,6 +515,7 @@ FUNC(os_status_t, OS_CODE) os_ipicall_recv_activate_task_asyn(os_ipicall_data_t 
 	}
 #endif
 
+	OS_TRACE_TASK_ACTIVATE(task_cfg);
 	ret = nxsem_post(&(task_inst->thread.act_sem));
 	if (ret == -EOVERFLOW) {
 		return OS_STATUS_LIMIT;

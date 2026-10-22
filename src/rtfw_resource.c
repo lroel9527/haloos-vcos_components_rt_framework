@@ -20,6 +20,7 @@
 #include "rtfw_task.h"
 #include "rtfw_lock_internal.h"
 #include "sched.h"
+#include "rtfw_trace.h"
 
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
@@ -85,6 +86,7 @@ FUNC(os_status_t, OS_CODE) os_get_resource(ResourceType resource_id)
 	/* Scheduling point, depends on this interface for scheduling, do not modify */
 	sched_lock();
 	flags = enter_critical_section();
+	OS_TRACE_GET_RESOURCE(resource_id);
 
 	/* Insert the current lock node into the task locklist */
 	os_list_append(OS_CONTEXT_GET_LOCKLIST_REF(current_context), &(resource_inst->lock.lock_node));
@@ -168,6 +170,7 @@ FUNC(os_status_t, OS_CODE) os_release_resource(ResourceType resource_id)
 		_SCHED_SETPARAM(0, &param);
 	}
 
+	OS_TRACE_RELEASE_RESOURCE(resource_id);
 	/* Scheduling point, depends on this interface for scheduling, do not modify */
 	leave_critical_section(flags);
 	sched_unlock();

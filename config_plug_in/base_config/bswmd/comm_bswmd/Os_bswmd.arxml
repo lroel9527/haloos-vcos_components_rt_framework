@@ -3925,6 +3925,74 @@
                         </ECUC-INTEGER-PARAM-DEF>
                       </PARAMETERS>
                     </ECUC-PARAM-CONF-CONTAINER-DEF>
+                    <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+                      <SHORT-NAME>OsArti</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">ARTI (AUTOSAR Run-Time Interface) trace configuration. Controls TRACE32 OS-awareness tracing features. Vendor extension under OsOS.</L-2>
+                        <L-2 L="ZH">概述：OsArti 是 AUTOSAR ARTI 运行时接口追踪配置容器，控制 TRACE32 OS感知追踪功能的各项开关。</L-2>
+                        <L-2 L="ZH">注意：使能各追踪开关后，构建系统将自动推理生成对应的 CONFIG_ 宏，无需手动配置。</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <PARAMETERS>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567891">
+                          <SHORT-NAME>OsArtiEnabled</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Master switch to enable ARTI tracing. When true, CONFIG_ARTI_ENABLED=y is automatically derived. Default: false.</L-2>
+                            <L-2 L="ZH">ARTI 追踪总开关。使能时自动生成 CONFIG_ARTI_ENABLED=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567897">
+                          <SHORT-NAME>OsArtiTaskTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable task state-change tracing via ARTI. When true, CONFIG_ARTI_TASK_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">Task 状态变化追踪开关。使能时自动生成 CONFIG_ARTI_TASK_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567892">
+                          <SHORT-NAME>OsArtiResourceTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable Resource lock/unlock tracing via ARTI. When true, CONFIG_ARTI_RESOURCE_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">Resource 锁/解锁追踪开关。使能时自动生成 CONFIG_ARTI_RESOURCE_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567893">
+                          <SHORT-NAME>OsArtiSpinlockTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable Spinlock acquire/release tracing via ARTI. When true, CONFIG_ARTI_SPINLOCK_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">Spinlock 获取/释放追踪开关。使能时自动生成 CONFIG_ARTI_SPINLOCK_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567894">
+                          <SHORT-NAME>OsArtiIntTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable interrupt disable/enable duration tracing via ARTI. When true, CONFIG_ARTI_INT_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">中断禁止/使能时间追踪开关。使能时自动生成 CONFIG_ARTI_INT_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567895">
+                          <SHORT-NAME>OsArtiCAT2ISRTTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable category 2 ISR tracing via ARTI. When true, CONFIG_ARTI_CAT2ISR_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">二类中断追踪开关。使能时自动生成 CONFIG_ARTI_CAT2ISR_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:b1c2d3e4-f5a6-7890-bcde-f01234567896">
+                          <SHORT-NAME>OsArtiRunnableTrace</SHORT-NAME>
+                          <DESC>
+                            <L-2 L="EN">Enable RTE runnable tracing via ARTI. When true, CONFIG_ARTI_RUNNABLE_TRACE=y is derived. Default: false.</L-2>
+                            <L-2 L="ZH">RTE Runnable 追踪开关。使能时自动生成 CONFIG_ARTI_RUNNABLE_TRACE=y。默认关闭。</L-2>
+                          </DESC>
+                          <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                      </PARAMETERS>
+                  </ECUC-PARAM-CONF-CONTAINER-DEF>
                   </SUB-CONTAINERS>
                 </ECUC-PARAM-CONF-CONTAINER-DEF>
                 <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:3d20f88a-4502-4ed1-9062-037ed116b946">

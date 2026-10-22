@@ -245,4 +245,13 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     template = env_ui.get_template("rt_framework.config.jinja2")
     render_os_template(template, output_dir, "rt_framework.config", config)
 
+    # ################################################## #
+    #    ARTI configuration and OS description          #
+    # ################################################## #
+    arti_enabled = context.Function.get_arti_cfg(config)["enabled"]
+    template = env_ui.get_template("arti_cfg.h.jinja2")
+    render_os_template(template, output_dir, "arti_cfg.h", config)
+    if arti_enabled:
+        template = env_ui.get_template("haloos.orti.jinja2")
+        render_os_template(template, output_dir, "haloos.orti", config)
     return True

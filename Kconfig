@@ -295,4 +295,54 @@ config RT_FRAMEWORK_SHARE_TASK_STACK
 	---help---
 		Enable RT_FRAMEWORK_SHARE_TASK_STACK
 
+config ARTI_ENABLED
+	bool "ARTI_ENABLED"
+	depends on ARCH_TRICORE
+	depends on TRICORE_TOOLCHAIN_TASKING || TRICORE_TOOLCHAIN_GNU
+	default n
+	---help---
+		Enable AUTOSAR ARTI (Run-Time Interface) tracing.
+		Enables the TRACE32 OLDA-based real-time tracing infrastructure.
+
+config ARTI_TASK_TRACE
+	bool "ARTI_TASK_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for task state transitions.
+
+config ARTI_RESOURCE_TRACE
+	bool "ARTI_RESOURCE_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for GetResource / ReleaseResource.
+
+config ARTI_SPINLOCK_TRACE
+	bool "ARTI_SPINLOCK_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for GetSpinlock / ReleaseSpinlock / TryToGetSpinlock.
+
+config ARTI_INT_TRACE
+	bool "ARTI_INT_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for interrupt masking APIs.
+
+config ARTI_CAT2ISR_TRACE
+	bool "ARTI_CAT2ISR_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for category 2 interrupt service routines.
+
+config ARTI_RUNNABLE_TRACE
+	bool "ARTI_RUNNABLE_TRACE"
+	depends on ARTI_ENABLED
+	default n
+	---help---
+		Enable ARTI tracing for runnable execution.
 endif # RT_FRAMEWORK

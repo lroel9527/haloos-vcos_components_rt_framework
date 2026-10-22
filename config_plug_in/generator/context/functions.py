@@ -852,6 +852,14 @@ class Function(FunctionBase):
 
     @staticmethod
     @pass_context
+    def get_cpu_core(context):
+        target = Function.get_target(context)
+        return utils.get_dict_path(context, [
+            'sys_cfg', 'sys_target_dict', 'target', target, 'CPU_CORE'
+        ])
+
+    @staticmethod
+    @pass_context
     def check_isq_dispatch_method_is_level(context):
         target = Function.get_target(context)
         if target in ("AURIX2G_TC397"):
@@ -1196,6 +1204,31 @@ class Function(FunctionBase):
                 osos_cfg.update({"ScalabilityClass": value.get("OsScalabilityClass","").get("Value","")})
                 break
         return osos_cfg
+
+    @staticmethod
+    @pass_context
+    def get_arti_cfg(context):
+        """Return ARTI switches from the OsArti ECUC sub-container."""
+        osos_cfg = Function.get_os_module_list(context, "/Os/OsOS")
+        arti_cont = osos_cfg.get("OsOS", {}).get("OsArti", {})
+
+        def _bool_val(key, default=False):
+            value = arti_cont.get(key, {}).get("Value", default)
+            if isinstance(value, bool):
+                return value
+            return str(value).lower() in ("true", "1", "yes")
+
+        enabled = _bool_val("OsArtiEnabled")
+        return {
+            "enabled": enabled,
+            # Preserve the pre-OsArtiTaskTrace behavior for existing ECUC files.
+            "task_trace": _bool_val("OsArtiTaskTrace", enabled),
+            "resource_trace": _bool_val("OsArtiResourceTrace"),
+            "spinlock_trace": _bool_val("OsArtiSpinlockTrace"),
+            "int_trace": _bool_val("OsArtiIntTrace"),
+            "cat2isr_trace": _bool_val("OsArtiCAT2ISRTTrace"),
+            "runnable_trace": _bool_val("OsArtiRunnableTrace"),
+        }
 
     @staticmethod
     @pass_context
@@ -1761,4 +1794,33 @@ class Function(FunctionBase):
         rtfw_config += Function.select_compiler(context)
         ########################################################
 
+        # CONFIG_ARTI_ENABLED / CONFIG_ARTI_*_TRACE
+        ########################################################
+        arti_cfg = Function.get_arti_cfg(context)
+        ARTI_SYMBOLS = {
+            "task_trace": "CONFIG_ARTI_TASK_TRACE",
+            "resource_trace": "CONFIG_ARTI_RESOURCE_TRACE",
+            "spinlock_trace": "CONFIG_ARTI_SPINLOCK_TRACE",
+            "int_trace": "CONFIG_ARTI_INT_TRACE",
+            "cat2isr_trace": "CONFIG_ARTI_CAT2ISR_TRACE",
+            "runnable_trace": "CONFIG_ARTI_RUNNABLE_TRACE",
+            }
+        if arti_cfg["enabled"]:
+            rtfw_config.append("CONFIG_ARTI_ENABLED=y")
+            rtfw_config.extend([
+                "CONFIG_SCHED_INSTRUMENTATION=y",
+                "CONFIG_DRIVERS_NOTE=y",
+            ])
+            if arti_cfg["task_trace"]:
+                rtfw_config.extend([
+                    "CONFIG_SCHED_INSTRUMENTATION_SWITCH=y",
+                    "CONFIG_SCHED_INSTRUMENTATION_WAKEUP=y",
+                ])
+            rtfw_config.extend(
+                f"{symbol}=y" if arti_cfg[key]
+                else f"# {symbol} is not set"
+                for key, symbol in ARTI_SYMBOLS.items()
+            )
+        else:
+            rtfw_config.append("# CONFIG_ARTI_ENABLED is not set")
         return rtfw_config

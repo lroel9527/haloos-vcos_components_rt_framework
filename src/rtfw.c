@@ -47,9 +47,21 @@
 #if defined(CONFIG_RT_FRAMEWORK_IOC) && (CONFIG_RT_FRAMEWORK_IOC == 1)
 #include "rtfw_ioc.h"
 #endif
-
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+#include "rtfw_arti.h"
+#endif
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
+
+FUNC(void, OS_CODE) OsPreStartInit(void)
+{
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+	if (os_get_core_id() == 0U) {
+		/* Enable OLDA before secondary cores can emit ARTI events. */
+		Arti_Init();
+	}
+#endif
+}
 
 FUNC(void, OS_CODE) StartOS(void)
 {

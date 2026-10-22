@@ -10,6 +10,7 @@
 #include "rtfw_hook.h"
 #include "rtfw_core.h"
 #include "rtfw_context.h"
+#include "rtfw_trace.h"
 
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
@@ -86,6 +87,8 @@ static noinline_function void os_task_thread_start(int argc, FAR char *argv[])
 
 	up_irq_enable();
 	nxsem_wait_uninterruptible(&(task_inst->thread.act_sem));
+
+	OS_TRACE_TASK_START(task_cfg);
 
 	os_thread_enter_task(task_cfg, current_context->app_owner_cfg->is_privileged);
 
