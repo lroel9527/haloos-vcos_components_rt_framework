@@ -1008,7 +1008,7 @@
                       <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
                       <DEFAULT-VALUE>0.001</DEFAULT-VALUE>
                       <MAX INTERVAL-TYPE="CLOSED">0.001</MAX>
-                      <MIN INTERVAL-TYPE="CLOSED">0.00000001</MIN>
+                      <MIN INTERVAL-TYPE="CLOSED">0.000000001</MIN>
                     </ECUC-FLOAT-PARAM-DEF>
                     <ECUC-INTEGER-PARAM-DEF UUID="ECUC:deceab52-a44e-40eb-9737-8eea4e860802">
                       <SHORT-NAME>OsCounterMaxAllowedValue</SHORT-NAME>

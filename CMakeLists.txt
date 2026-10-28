@@ -16,6 +16,8 @@
 
 if(CONFIG_RT_FRAMEWORK)
   set(CSRCS src/rtfw.c
+            src/rtfw_init.c
+            ${GENDATA_DIR}/Memmap/memory_table_cfg.c
             src/rtfw_task.c
             src/rtfw_thread.c
             src/rtfw_isr.c
@@ -140,6 +142,11 @@ endif ()
   nuttx_add_library(rt_framework STATIC)
   target_sources(rt_framework PRIVATE ${CSRCS})
   target_include_directories(rt_framework PRIVATE ${INCLUDE_DIRS} ${VENDOR_THIRD_PARTY_DRIVER_INCDIR})
+
+  if(CONFIG_ARTI_ENABLED)
+    # rtfw_arti.h exposes arti.h to generated RTE hooks and other consumers.
+    target_link_libraries(rt_framework PUBLIC arti_t32)
+  endif()
 
   if (CONFIG_IRQ_USE_ARCH_DISPATCH)
     if(CONFIG_ARCH_TRICORE)
