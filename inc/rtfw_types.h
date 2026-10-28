@@ -22,6 +22,10 @@
 #include "Os_Types.h"
 #include <stddef.h>
 #include <stdint.h>
+#include "rtfw_compiler_cfg.h"
+
+#define RTFW_CODE locate_code(OS_CODE_SECTION)
+#define RTFW_CONST locate_data(OS_CONST_SECTION)
 
 typedef int16_t isr_id_t;
 

@@ -30,6 +30,14 @@ class Function(FunctionBase):
     _cache = []
 
     @staticmethod
+    @pass_context
+    def get_mpu_cfg(context):
+        if Function.get_target(context) == "AURIX2G_TC499N":
+            from .memory_protection import RtfwMpu
+            return RtfwMpu.get_mpu_cfg(context)
+        return Function.get_mpu_cfg_legacy(context)
+
+    @staticmethod
     def clear_caches():
         for ch in Function._cache:
             ch.clear_cache()
@@ -862,7 +870,7 @@ class Function(FunctionBase):
     @pass_context
     def check_isq_dispatch_method_is_level(context):
         target = Function.get_target(context)
-        if target in ("AURIX2G_TC397"):
+        if target in ("AURIX2G_TC397", "AURIX2G_TC499N"):
             return True
         elif target in ("FC7300F8MDT"):
             return False
@@ -879,10 +887,10 @@ class Function(FunctionBase):
         compiler = context['sys_cfg']['compiler']
         #Make sure the target chip option exists in the compiler, otherwise add it
         if compiler == "tasking":
-            if target in ("AURIX2G_TC397"):
+            if target in ("AURIX2G_TC397", "AURIX2G_TC499N"):
                 ret.append('CONFIG_TRICORE_TOOLCHAIN_TASKING=y')
         elif compiler == "gcc":
-            if target in ("AURIX2G_TC397"):
+            if target in ("AURIX2G_TC397", "AURIX2G_TC499N"):
                 ret.append('CONFIG_TRICORE_TOOLCHAIN_GNU=y')
             elif target in ("FC7300F8MDT"):
                 ret.append('CONFIG_ARM_TOOLCHAIN_GNU=y')
@@ -1239,9 +1247,9 @@ class Function(FunctionBase):
         core_mpu_cfg.update({"code_region":{}})
         for region_name, region_value in region_cfg.items():
             if '' == region_value["MemoryRegionOwner"] and "Core"+ str(coreid) in region_value["MemoryRegionProtectionUnit"]:
-                if target not in ("AURIX2G_TC397") or '_R' in region_value["MemoryRegionAccessRights"]:
+                if target not in ("AURIX2G_TC397", "AURIX2G_TC499N") or '_R' in region_value["MemoryRegionAccessRights"]:
                     core_mpu_cfg["data_region"].update({region_name:region_value})
-                if target in ("AURIX2G_TC397") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
+                if target in ("AURIX2G_TC397", "AURIX2G_TC499N") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
                     core_mpu_cfg["code_region"].update({region_name:region_value})
         core_mpu_cfg["data_region"].update({"data_region_cnt":(len(core_mpu_cfg["data_region"]) + 1)})
         core_mpu_cfg["data_region"].update({"data_region_start":0})
@@ -1267,12 +1275,12 @@ class Function(FunctionBase):
                 app_mpu_cfg[app_name].update({"code_region":{}})
                 for region_name, region_value in region_cfg.items():
                     if app_name == region_value["MemoryRegionOwner"] and "Core"+ str(coreid) in region_value["MemoryRegionProtectionUnit"]:
-                        if target not in ("AURIX2G_TC397") or '_R' in region_value["MemoryRegionAccessRights"]:
+                        if target not in ("AURIX2G_TC397", "AURIX2G_TC499N") or '_R' in region_value["MemoryRegionAccessRights"]:
                             if 0 == app_value["AppMemoryProtectionIdentifier"]:
                                 set0_mpu_cfg["data_region"].update({region_name:region_value})
                             else:
                                 app_mpu_cfg[app_name]["data_region"].update({region_name:region_value})
-                        if target in ("AURIX2G_TC397") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
+                        if target in ("AURIX2G_TC397", "AURIX2G_TC499N") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
                             if 0 == app_value["AppMemoryProtectionIdentifier"]:
                                 set0_mpu_cfg["code_region"].update({region_name:region_value})
                             else:
@@ -1307,9 +1315,9 @@ class Function(FunctionBase):
                     task_mpu_cfg[task_name].update({"code_region":{}})
                     for region_name, region_value in region_cfg.items():
                         if task_name == region_value["MemoryRegionOwner"] and "Core"+ str(coreid) in region_value["MemoryRegionProtectionUnit"]:
-                            if target not in ("AURIX2G_TC397") or '_R' in region_value["MemoryRegionAccessRights"]:
+                            if target not in ("AURIX2G_TC397", "AURIX2G_TC499N") or '_R' in region_value["MemoryRegionAccessRights"]:
                                 task_mpu_cfg[task_name]["data_region"].update({region_name:region_value})
-                            if target in ("AURIX2G_TC397") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
+                            if target in ("AURIX2G_TC397", "AURIX2G_TC499N") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
                                 task_mpu_cfg[task_name]["code_region"].update({region_name:region_value})
                     task_mpu_cfg[task_name]["data_region"].update({"data_region_cnt":len(task_mpu_cfg[task_name]["data_region"])})
                     task_mpu_cfg[task_name]["data_region"].update({"data_region_start":app_mpu_cfg[app_name]["data_region"]["data_region_end"]})
@@ -1323,9 +1331,9 @@ class Function(FunctionBase):
         task_mpu_cfg[task_name].update({"code_region":{}})
         for region_name, region_value in region_cfg.items():
             if task_name == region_value["MemoryRegionOwner"] and "Core"+ str(coreid) in region_value["MemoryRegionProtectionUnit"]:
-                if target not in ("AURIX2G_TC397") or '_R' in region_value["MemoryRegionAccessRights"]:
+                if target not in ("AURIX2G_TC397", "AURIX2G_TC499N") or '_R' in region_value["MemoryRegionAccessRights"]:
                     task_mpu_cfg[task_name]["data_region"].update({region_name:region_value})
-                if target in ("AURIX2G_TC397") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
+                if target in ("AURIX2G_TC397", "AURIX2G_TC499N") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
                     task_mpu_cfg[task_name]["code_region"].update({region_name:region_value})
         task_mpu_cfg[task_name]["data_region"].update({"data_region_cnt":len(task_mpu_cfg[task_name]["data_region"])})
         task_mpu_cfg[task_name]["data_region"].update({"data_region_start":set0_mpu_cfg["data_region"]["data_region_end"]})
@@ -1349,9 +1357,9 @@ class Function(FunctionBase):
                     isr_mpu_cfg[isr_name].update({"code_region":{}})
                     for region_name, region_value in region_cfg.items():
                         if isr_name == region_value["MemoryRegionOwner"] and "Core"+ str(coreid) in region_value["MemoryRegionProtectionUnit"]:
-                            if target not in ("AURIX2G_TC397") or '_R' in region_value["MemoryRegionAccessRights"]:
+                            if target not in ("AURIX2G_TC397", "AURIX2G_TC499N") or '_R' in region_value["MemoryRegionAccessRights"]:
                                 isr_mpu_cfg[isr_name]["data_region"].update({region_name:region_value})
-                            if target in ("AURIX2G_TC397") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
+                            if target in ("AURIX2G_TC397", "AURIX2G_TC499N") and ('_X' in region_value["MemoryRegionAccessRights"] or '_RX' in region_value["MemoryRegionAccessRights"]):
                                 isr_mpu_cfg[isr_name]["code_region"].update({region_name:region_value})
                     isr_mpu_cfg[isr_name]["data_region"].update({"data_region_cnt":len(isr_mpu_cfg[isr_name]["data_region"])})
                     isr_mpu_cfg[isr_name]["data_region"].update({"data_region_start":app_mpu_cfg[app_name]["data_region"]["data_region_end"]})
@@ -1363,7 +1371,7 @@ class Function(FunctionBase):
 
     @staticmethod
     @pass_context
-    def get_mpu_cfg(context):
+    def get_mpu_cfg_legacy(context):
         region_list = Function.get_os_module_list(context, "/Os/OsMemoryProtection")
         if region_list:
             region_list	 = region_list["OsMemoryProtection"]

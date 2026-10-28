@@ -53,8 +53,13 @@
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
 
+#include "rtfw_mem_internal.h"
+#include "memory_table_cfg.h"
+
 FUNC(void, OS_CODE) OsPreStartInit(void)
 {
+    const CoreIdType core_id = os_get_core_id();
+    rtfw_memory_init(mem_init_table_ref_list[core_id][MEMORY_STARTUP_STAGE_ID]);
 #if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
 	if (os_get_core_id() == 0U) {
 		/* Enable OLDA before secondary cores can emit ARTI events. */
