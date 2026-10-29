@@ -26,6 +26,9 @@
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 #include "rtfw_schedtable.h"
 #endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_SPINLOCK) && (CONFIG_RT_FRAMEWORK_SPINLOCK == 1)
 #include "rtfw_spinlock.h"
 #endif
@@ -44,9 +47,26 @@
 #if defined(CONFIG_RT_FRAMEWORK_IOC) && (CONFIG_RT_FRAMEWORK_IOC == 1)
 #include "rtfw_ioc.h"
 #endif
-
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+#include "rtfw_arti.h"
+#endif
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
+
+#include "rtfw_mem_internal.h"
+#include "memory_table_cfg.h"
+
+FUNC(void, OS_CODE) OsPreStartInit(void)
+{
+    const CoreIdType core_id = os_get_core_id();
+    rtfw_memory_init(mem_init_table_ref_list[core_id][MEMORY_STARTUP_STAGE_ID]);
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+	if (os_get_core_id() == 0U) {
+		/* Enable OLDA before secondary cores can emit ARTI events. */
+		Arti_Init();
+	}
+#endif
+}
 
 FUNC(void, OS_CODE) StartOS(void)
 {
@@ -71,6 +91,9 @@ FUNC(void, OS_CODE) StartOS(void)
 #endif
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 	os_schedule_table_init(os_schedtable_cfg_ref_table, os_schedtable_cfg_ref_table_size);
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	os_alarm_init(os_alarm_cfg_ref_table, os_alarm_cfg_ref_table_size);
 #endif
 #endif /* CONFIG_RT_FRAMEWORK_MULTIAPP */
 

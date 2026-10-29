@@ -26,6 +26,7 @@
 #include "rtfw_syscall_internal.h"
 #endif
 #include "rtfw_thread_internal.h"
+#include "rtfw_trace.h"
 #if (defined(CONFIG_RT_FRAMEWORK_RESOURCE) && (CONFIG_RT_FRAMEWORK_RESOURCE == 1)) ||                                  \
 	(defined(CONFIG_RT_FRAMEWORK_SPINLOCK) && (CONFIG_RT_FRAMEWORK_SPINLOCK == 1))
 #include "rtfw_lock_internal.h"
@@ -136,6 +137,15 @@ FUNC(void, OS_CODE) os_task_init(const os_task_cfg_t *const os_task_cfg_table[],
 
 		task_inst->thread.act_sem.sem_max_value = task_cfg->activation_limit - 1;
 
+		if (task_cfg->autostart_mode) {
+			OS_TRACE_TASK_ACTIVATE(task_cfg);
+		}
+
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+		task_inst->arti_resume_reason = (uint8_t)RTFW_ARTI_TASK_RESUME_NONE;
+		task_inst->arti_job_active = 0U;
+#endif
+
 		nxtask_activate(&(task_inst->thread.tcb));
 	}
 }
@@ -184,6 +194,7 @@ FUNC(os_status_t, OS_CODE) os_activate_task(TaskType task_id)
 			return OS_STATUS_NOT_ACCESSIBLE;
 		}
 #endif
+		OS_TRACE_TASK_ACTIVATE(task_cfg);
 		ret = nxsem_post(&(task_inst->thread.act_sem));
 		if (ret == -EOVERFLOW) {
 			return OS_STATUS_LIMIT;
@@ -237,6 +248,13 @@ FUNC(os_status_t, OS_CODE) os_terminate_task(void)
 	task_inst = OS_CONTEXT_GET_TASK_INSTANCE_REF(current_context);
 	task_inst->thread.tcb.flags |= (TCB_FLAG_THREAD_IN_KERNEL_MPU_SET | TCB_FLAG_THREAD_IS_SUSPENDED);
 
+	OS_TRACE_TASK_TERMINATE(OS_CONTEXT_GET_TASK_CFG_REF(current_context));
+#if (CONFIG_RT_FRAMEWORK_TASK_MULTIPLE_ACTIVATION == 1)
+	/* The running activation has already consumed one semaphore token. */
+	if (task_inst->thread.act_sem.semcount >= 1) {
+		OS_TRACE_TASK_REACTIVATE(OS_CONTEXT_GET_TASK_CFG_REF(current_context));
+	}
+#endif
 	longjmp(task_inst->thread.jmpbuf, 1);
 	/* not be executed */
 	return OS_STATUS_OK;
@@ -278,6 +296,7 @@ FUNC(os_status_t, OS_CODE) os_activate_task_asyn(TaskType task_id)
 			return OS_STATUS_NOT_ACCESSIBLE;
 		}
 #endif
+		OS_TRACE_TASK_ACTIVATE(task_cfg);
 		ret = nxsem_post(&(task_inst->thread.act_sem));
 		if (ret == -EOVERFLOW) {
 			return OS_STATUS_LIMIT;
@@ -349,6 +368,7 @@ FUNC(os_status_t, OS_CODE) os_chain_task(TaskType task_id)
 			return OS_STATUS_NOT_ACCESSIBLE;
 		}
 #endif
+		OS_TRACE_TASK_ACTIVATE(task_cfg);
 		ret = nxsem_post(&(task_inst->thread.act_sem));
 		if (ret == -EOVERFLOW) {
 			return OS_STATUS_LIMIT;

@@ -14,6 +14,7 @@
 # limitations under the License.
 ############################################################################
 from func_module.validation.common.basic_rule import BasicRule, timing_decorator
+import math
 from durable.lang import *
 from durable.engine import *
 from .Os_ruleutils import OsRuleutils
@@ -26,6 +27,7 @@ class Os016011Rule(BasicRule):
     def __init__(self, logs, validation_data) -> None:
         super().__init__()
         self.logs = logs
+        self.target = validation_data.sys_info_class.target
         self.ecuc_os_dict = validation_data.bsw_ecuc_dict['Os']['ArPackages']['ActiveEcuC']['Os']
         self.validation_code = self.__class__.ruleset_name
         self.validation_summary = "If it is a hardware-driven counter, check the counter configuration"
@@ -75,7 +77,7 @@ class Os016011Rule(BasicRule):
                         hardware_channel_name = publish_info.get(hardware_timer_name,{}).get("OsHardWareTimerChannel",{}).get("Value","")
                         hardware_frequency = publish_info.get(hardware_timer_name,{}).get("OsHardWareTimerClockFrequency",{}).get("Value","")
                         second_per_tick = os_instance.get("OsSecondsPerTick",{}).get("Value","")
-                        if second_per_tick > float(format(0.000001/hardware_frequency, '.15f')) or second_per_tick < 0.000001/hardware_frequency:
+                        if not math.isclose(second_per_tick, 0.000001 / hardware_frequency, rel_tol=1e-12, abs_tol=0.0):
                             validation_data.update({"counter_name": os_key})
                             validation_data.update({"second_per_tick": format(0.000001/hardware_frequency, '.15f')})
                             validation_data.update({"error_detail": "OsSecondsPerTick is filled in incorrectly, it is recommended to fill in the value of second_per_tick"})
@@ -92,11 +94,14 @@ class Os016011Rule(BasicRule):
                             validation_data.update({"isr_name": isr_name})
                             validation_data.update({"error_detail": "the isr has been initial enabled"})
                             break
+                        # TC499N bare-metal startup runs in VM1: comparator 0
+                        # raises STMCPU[n].SR2 (VM0 would use SR0 at 0x20).
+                        stm_base, stm_stride = (0x28, 0x40) if self.target == "AURIX2G_TC499N" else (768, 8)
                         isr_source = isr_dict.get(isr_name,{}).get("OsIsrInterruptSource",{}).get("Value","")
-                        if hardware_channel_name.startswith("STM") and ((768 + int(hardware_channel_name[-1]) * 8) != isr_source):
+                        if hardware_channel_name.startswith("STM") and ((stm_base + int(hardware_channel_name[-1]) * stm_stride) != isr_source):
                             validation_data.update({"counter_name": os_key})
                             validation_data.update({"isr_name": isr_name})
-                            validation_data.update({"isr_source": 768 + int(hardware_channel_name[-1]) * 8})
+                            validation_data.update({"isr_source": stm_base + int(hardware_channel_name[-1]) * stm_stride})
                             validation_data.update({"error_detail": "OsIsrInterruptSource is filled in incorrectly, it is recommended to fill in the value of isr_source"})
                             break
                         elif hardware_channel_name.startswith("GTM") and (30 != isr_source):

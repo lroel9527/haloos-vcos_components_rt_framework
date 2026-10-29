@@ -91,6 +91,10 @@ struct os_task_event_s {
 struct os_task_inst_s {
 	os_ctx_inst_t ctx_instance; /*! 上下文实例。必须是第一个成员！！！ */
 	os_task_thread_inst_t thread;
+#if defined(CONFIG_ARTI_ENABLED) && (CONFIG_ARTI_ENABLED == 1)
+	uint8_t arti_resume_reason;
+	uint8_t arti_job_active;
+#endif
 }; /* os_task_inst_t */
 
 /*! Task configuration by user */

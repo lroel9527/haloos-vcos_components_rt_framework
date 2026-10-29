@@ -32,6 +32,9 @@ extern "C" {
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 #include "rtfw_schedtable.h"
 #endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm_types.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_HOOK) && (CONFIG_RT_FRAMEWORK_HOOK == 1)
 #include "rtfw_hook_types.h"
 #endif
@@ -62,6 +65,10 @@ struct os_app_cfg_s {
 #if defined(CONFIG_RT_FRAMEWORK_COUNTER) && (CONFIG_RT_FRAMEWORK_COUNTER == 1)
 	const os_counter_cfg_t *const *counter_refs;
 	const OsObjIndexType *counter_count;
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	const os_alarm_cfg_t *const *alarm_refs; /*! List of Alarms of this application. */
+	const OsObjIndexType *alarm_count; /*! Number of Alarms. */
 #endif
 #if defined(CONFIG_RT_FRAMEWORK_MEMORY_PROTECTION) && (CONFIG_RT_FRAMEWORK_MEMORY_PROTECTION == 1)
 	const struct mpu_access_right_s *mpu_access_right;
@@ -95,7 +102,7 @@ extern FUNC(void, OS_CODE) os_app_init(const os_app_cfg_t *const os_app_cfg_tabl
 #define OS_STOP_SEC_CODE
 #include "rtfw_memmap.h"
 
-#if (CONFIG_RT_FRAMEWORK_ACCESSCHECK == 1)
+#ifdef CONFIG_RT_FRAMEWORK_ACCESSCHECK
 static inline os_status_t os_app_check_access(ApplicationIDType app_id, uint32 access_mask)
 {
 	if (app_id > (ApplicationIDType)31) {

@@ -19,6 +19,7 @@
 #include "rtfw_core.h"
 #include "rtfw_application.h"
 #include "rtfw_error.h"
+#include "rtfw_trace.h"
 
 static inline void __spin_init(os_spin_t *lock)
 {
@@ -333,9 +334,13 @@ FUNC(os_status_t, OS_CODE) os_get_spinlock(const os_spin_id_t spin_id)
 		__spin_lock(&(lock_inst->spin));
 		lock_inst->owner_context = cur_context;
 		os_list_append(OS_CONTEXT_GET_LOCKLIST_REF(cur_context), &(lock_inst->lock.lock_node));
+		OS_TRACE_GET_SPINLOCK(spin_id);
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		__spin_lock(&(lock_inst->spin));
+		OS_TRACE_GET_SPINLOCK(spin_id);
+		os_int_resume_kernel(&int_state);
 	}
 	return OS_STATUS_OK;
 }
@@ -396,9 +401,13 @@ FUNC(os_status_t, OS_CODE) os_release_spinlock(const os_spin_id_t spin_id)
 		os_list_remove(OS_CONTEXT_GET_LOCKLIST_REF(cur_context), &(lock_inst->lock.lock_node));
 		lock_inst->owner_context = NULL_PTR;
 		__spin_unlock(&(lock_inst->spin));
+		OS_TRACE_RELEASE_SPINLOCK(spin_id);
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		__spin_unlock(&(lock_inst->spin));
+		OS_TRACE_RELEASE_SPINLOCK(spin_id);
+		os_int_resume_kernel(&int_state);
 	}
 
 	spin_remove_lock_method(spin_cfg->method);
@@ -466,16 +475,20 @@ FUNC(os_status_t, OS_CODE) os_try_to_get_spinlock(const os_spin_id_t spin_id, tr
 		os_int_suspend_kernel(&int_state);
 		lock_succ = __spin_trylock(&(lock_inst->spin));
 		if (LIKELY(lock_succ == TRUE)) {
+			OS_TRACE_GET_SPINLOCK(spin_id);
 			*success = TRYTOGETSPINLOCK_SUCCESS;
 			lock_inst->owner_context = cur_context;
 			os_list_append(OS_CONTEXT_GET_LOCKLIST_REF(cur_context), &(lock_inst->lock.lock_node));
 		}
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		lock_succ = __spin_trylock(&(lock_inst->spin));
 		if (LIKELY(lock_succ == TRUE)) {
+			OS_TRACE_GET_SPINLOCK(spin_id);
 			*success = TRYTOGETSPINLOCK_SUCCESS;
 		}
+		os_int_resume_kernel(&int_state);
 	}
 
 	if (UNLIKELY(lock_succ != TRUE)) {
@@ -490,6 +503,7 @@ FUNC(os_status_t, OS_CODE) os_get_spinlock_read(const os_spin_id_t spin_id)
 	os_spin_inst_t *lock_inst;
 	const os_spinlock_cfg_t *spin_cfg;
 	os_status_t check_stat;
+	irqlevel_t int_state;
 	os_ctx_cfg_t *const cur_context = os_context_get_contexthdl();
 
 #if (CONFIG_RT_FRAMEWORK_ACCESSCHECK == 1)
@@ -524,7 +538,10 @@ FUNC(os_status_t, OS_CODE) os_get_spinlock_read(const os_spin_id_t spin_id)
 	}
 
 	spin_suspend_lock_method(spin_cfg->method);
+	os_int_suspend_kernel(&int_state);
 	__spin_rd_lock((os_rw_spin_t *)(&(lock_inst->spin)));
+	OS_TRACE_GET_SPINLOCK(spin_id);
+	os_int_resume_kernel(&int_state);
 
 	return OS_STATUS_OK;
 }
@@ -584,9 +601,13 @@ FUNC(os_status_t, OS_CODE) os_get_spinlock_write(const os_spin_id_t spin_id)
 		lock_inst->owner_context = cur_context;
 		os_list_append(OS_CONTEXT_GET_LOCKLIST_REF(cur_context), &(lock_inst->lock.lock_node));
 
+		OS_TRACE_GET_SPINLOCK(spin_id);
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		__spin_wr_lock((os_rw_spin_t *)(&(lock_inst->spin)));
+		OS_TRACE_GET_SPINLOCK(spin_id);
+		os_int_resume_kernel(&int_state);
 	}
 
 	return OS_STATUS_OK;
@@ -597,6 +618,7 @@ FUNC(os_status_t, OS_CODE) os_release_spinlock_read(const os_spin_id_t spin_id)
 	os_spin_inst_t *lock_inst;
 	const os_spinlock_cfg_t *spin_cfg;
 	os_status_t check_stat;
+	irqlevel_t int_state;
 	os_ctx_cfg_t *const cur_context = os_context_get_contexthdl();
 
 #if (CONFIG_RT_FRAMEWORK_ACCESSCHECK == 1)
@@ -634,7 +656,10 @@ FUNC(os_status_t, OS_CODE) os_release_spinlock_read(const os_spin_id_t spin_id)
 		/* do nothing */
 	}
 
+	os_int_suspend_kernel(&int_state);
 	__spin_rd_unlock((os_rw_spin_t *)(&(lock_inst->spin)));
+	OS_TRACE_RELEASE_SPINLOCK(spin_id);
+	os_int_resume_kernel(&int_state);
 	spin_remove_lock_method(spin_cfg->method);
 
 	return OS_STATUS_OK;
@@ -690,9 +715,13 @@ FUNC(os_status_t, OS_CODE) os_release_spinlock_write(const os_spin_id_t spin_id)
 		lock_inst->owner_context = NULL_PTR;
 		__spin_wr_unlock((os_rw_spin_t *)(&(lock_inst->spin)));
 
+		OS_TRACE_RELEASE_SPINLOCK(spin_id);
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		__spin_wr_unlock((os_rw_spin_t *)(&(lock_inst->spin)));
+		OS_TRACE_RELEASE_SPINLOCK(spin_id);
+		os_int_resume_kernel(&int_state);
 	}
 
 	spin_remove_lock_method(spin_cfg->method);
@@ -705,6 +734,7 @@ FUNC(os_status_t, OS_CODE) os_try_to_get_spinlock_read(const os_spin_id_t spin_i
 	const os_spinlock_cfg_t *spin_cfg;
 	boolean lock_succ;
 	os_status_t check_stat;
+	irqlevel_t int_state;
 	os_ctx_cfg_t *const cur_context = os_context_get_contexthdl();
 
 #if (CONFIG_RT_FRAMEWORK_ACCESSCHECK == 1)
@@ -747,10 +777,14 @@ FUNC(os_status_t, OS_CODE) os_try_to_get_spinlock_read(const os_spin_id_t spin_i
 	spin_suspend_lock_method(spin_cfg->method);
 	*success = TRYTOGETSPINLOCK_NOSUCCESS;
 
+	os_int_suspend_kernel(&int_state);
 	lock_succ = __spin_rd_trylock((os_rw_spin_t *)(&(lock_inst->spin)));
 	if (LIKELY(lock_succ == TRUE)) {
+		OS_TRACE_GET_SPINLOCK(spin_id);
 		*success = TRYTOGETSPINLOCK_SUCCESS;
-	} else {
+	}
+	os_int_resume_kernel(&int_state);
+	if (UNLIKELY(lock_succ != TRUE)) {
 		spin_remove_lock_method(spin_cfg->method);
 	}
 
@@ -819,6 +853,7 @@ FUNC(os_status_t, OS_CODE) os_try_to_get_spinlock_write(const os_spin_id_t spin_
 
 		lock_succ = __spin_wr_trylock((os_rw_spin_t *)(&(lock_inst->spin)));
 		if (LIKELY(lock_succ == TRUE)) {
+			OS_TRACE_GET_SPINLOCK(spin_id);
 			*success = TRYTOGETSPINLOCK_SUCCESS;
 			lock_inst->owner_context = cur_context;
 			os_list_append(OS_CONTEXT_GET_LOCKLIST_REF(cur_context), &(lock_inst->lock.lock_node));
@@ -826,10 +861,13 @@ FUNC(os_status_t, OS_CODE) os_try_to_get_spinlock_write(const os_spin_id_t spin_
 
 		os_int_resume_kernel(&int_state);
 	} else {
+		os_int_suspend_kernel(&int_state);
 		lock_succ = __spin_wr_trylock((os_rw_spin_t *)(&(lock_inst->spin)));
 		if (LIKELY(lock_succ == TRUE)) {
+			OS_TRACE_GET_SPINLOCK(spin_id);
 			*success = TRYTOGETSPINLOCK_SUCCESS;
 		}
+		os_int_resume_kernel(&int_state);
 	}
 
 	if (UNLIKELY(lock_succ != TRUE)) {

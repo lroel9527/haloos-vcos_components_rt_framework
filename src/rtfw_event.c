@@ -22,6 +22,7 @@
 #include "rtfw_core.h"
 #include "rtfw_lock_internal.h"
 #include "rtfw_event_internal.h"
+#include "rtfw_trace.h"
 
 #define OS_START_SEC_CODE
 #include "rtfw_memmap.h"
@@ -139,9 +140,11 @@ FUNC(os_status_t, OS_CODE) os_set_event(TaskType task_id, os_event_mask_t mask)
 		if (UNLIKELY(task_inst->thread.tcb.flags & TCB_FLAG_THREAD_IS_SUSPENDED)) {
 			return OS_STATUS_STOPPED;
 		} else {
+			OS_TRACE_TASK_RELEASE(task_cfg);
 			return (nxevent_post(&(task_event->event), mask, 0) == 0 ? OS_STATUS_OK : OS_STATUS_NOT_OK);
 		}
 #else
+		OS_TRACE_TASK_RELEASE(task_cfg);
 		return (nxevent_post(&(task_event->event), mask, 0) == 0 ? OS_STATUS_OK : OS_STATUS_NOT_OK);
 #endif
 	} else {
@@ -182,9 +185,11 @@ FUNC(os_status_t, OS_CODE) os_set_event_asyn(TaskType task_id, os_event_mask_t m
 		if (UNLIKELY(task_inst->thread.tcb.flags & TCB_FLAG_THREAD_IS_SUSPENDED)) {
 			return OS_STATUS_STOPPED;
 		} else {
+			OS_TRACE_TASK_RELEASE(task_cfg);
 			return (nxevent_post(&(task_event->event), mask, 0) == 0 ? OS_STATUS_OK : OS_STATUS_NOT_OK);
 		}
 #else
+	OS_TRACE_TASK_RELEASE(task_cfg);
 	return (nxevent_post(&(task_event->event), mask, 0) == 0 ? OS_STATUS_OK : OS_STATUS_NOT_OK);
 #endif
 	} else {
@@ -271,6 +276,7 @@ FUNC(os_status_t, OS_CODE) os_clear_event(os_event_mask_t mask)
 		return OS_STATUS_NOT_EXTENDED_TASK;
 	}
 #endif
+	OS_TRACE_EVENT(task_cfg, mask);
 	(void)nxevent_clear(&(task_cfg->event_hdl->event), mask);
 
 	return OS_STATUS_OK;

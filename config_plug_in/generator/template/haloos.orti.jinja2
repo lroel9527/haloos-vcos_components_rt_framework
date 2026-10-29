@@ -1,0 +1,489 @@
+{#- ORTI 2.3 — OS Run-Time Interface for TRACE32 static OS awareness
+    Generated from ECUC configuration. Do not edit manually.
+    Usage in TRACE32:
+      TASK.ORTI haloos.orti
+      TASK.ARTI Os_arti.arxml
+-#}
+{%- set tasks = get_task_cfg() %}
+{%- set isrs = get_isr_cfg() %}
+{%- set apps = get_app_cfg() %}
+{%- set resources = get_resource_cfg() %}
+{%- set spinlocks = get_spinlock_cfg() %}
+{%- set alarms = get_alarm_cfg() %}
+{%- set schedtables = get_schedtable_cfg() %}
+{%- set core_cnt = get_core_cnt() %}
+{%- set cpu_core = get_cpu_core() %}
+{%- set task_core_map = {} %}
+{%- set task_id_order = [] %}
+{%- set cat2_isrs = [] %}
+{%- set alarm_id_order = [] %}
+{%- set schedtable_id_order = [] %}
+{%- set isr_cfg_idx = namespace(val=0) %}
+{%- for app_name, app_info in apps.items() %}
+{%- for task_name in app_info.get("AppTaskList", []) %}
+{%- set _ = task_core_map.update({task_name: app_info.CoreNumber|int}) %}
+{%- set _ = task_id_order.append(task_name) %}
+{%- endfor %}
+{%- for alarm_name in app_info.get("AppAlarmList", []) %}
+{%- if alarm_name in alarms %}
+{%- set _ = alarm_id_order.append(alarm_name) %}
+{%- endif %}
+{%- endfor %}
+{%- for st_name in app_info.get("AppScheduleTableList", []) %}
+{%- if st_name in schedtables %}
+{%- set _ = schedtable_id_order.append(st_name) %}
+{%- endif %}
+{%- endfor %}
+{%- for isr_name in app_info.get("AppIsrList", []) %}
+{%- if isrs[isr_name].get("IsrCategory", "ISR_CAT2") == "ISR_CAT2" %}
+{%- set _ = cat2_isrs.append((isr_name, isrs[isr_name], app_info.CoreNumber|int, isr_cfg_idx.val)) %}
+{%- endif %}
+{%- set isr_cfg_idx.val = isr_cfg_idx.val + 1 %}
+{%- endfor %}
+{%- endfor -%}
+VERSION {
+  KOIL = "2.3";
+  OSSEMANTICS = "ORTI", "2.3";
+};
+
+IMPLEMENTATION HaloOs {
+  OS {
+    STRING vs_SMP_NUMCPU, "Number of CPUs";
+    STRING vs_NUM_TASKS, "Number of Tasks";
+    STRING vs_NUM_ISR2S, "Number of ISR2s";
+    STRING vs_NUM_ALARMS, "Number of Alarms";
+    STRING vs_NUM_SCHEDTABLES, "Number of Schedule Tables";
+    STRING vs_NUM_RESOURCES, "Number of Resources";
+    STRING vs_NUM_SPINLOCKS, "Number of Spinlocks";
+    TOTRACE ENUM "unsigned int" [
+{%- for task_name in task_id_order %}
+      "{{task_name}}" = {{loop.index0}},
+
+{%- endfor %}
+{%- for core_id in range(core_cnt) %}
+      "CPU{{core_id}}_IDLE" = {{(task_id_order|length) + core_id}},
+
+{%- endfor %}
+      "NO_TASK" = 65535
+    ] RUNNINGTASK[], "Running Task Identification";
+    TOTRACE ENUM "unsigned int" [
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+      "{{isr_name}}" = {{loop.index}},
+
+{%- endfor %}
+      "NO_ISR" = 65535
+    ] RUNNINGISR2, "Running ISR2 Identification";
+
+    ENUM "unsigned int" [
+      "E_OK" = 0,
+      "E_OS_ACCESS" = 1,
+      "E_OS_CALLEVEL" = 2,
+      "E_OS_ID" = 3,
+      "E_OS_LIMIT" = 4,
+      "E_OS_NOFUNC" = 5,
+      "E_OS_RESOURCE" = 6,
+      "E_OS_STATE" = 7,
+      "E_OS_VALUE" = 8
+    ] LASTERROR[], "Last OS Error";
+  }, "OS";
+  TASK {
+    ENUM [
+{%- for core_id in range(core_cnt) %}
+      "Core{{core_id}}" = "{{core_id}}"{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CORE_ID, "Core ID";
+    ENUM "unsigned char" [
+{%- set prio_set = namespace(vals=[]) %}
+{%- for task_name, task_cfg in tasks.items() %}
+{%- if task_cfg.TaskPriority not in prio_set.vals %}
+{%- set prio_set.vals = prio_set.vals + [task_cfg.TaskPriority] %}
+{%- endif %}
+{%- endfor %}
+{%- for pval in prio_set.vals|sort(reverse=true) %}
+      "{{pval}}" = {{pval}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] PRIORITY, "Task Priority";
+    ENUM [
+      "SUSPENDED" = 0,
+      "READY" = 1,
+      "RUNNING" = 2,
+      "WAITING" = 3
+    ] STATE, "Task State";
+    ENUM "unsigned int" [
+{%- set act_set = namespace(vals=[0]) %}
+{%- for task_name, task_cfg in tasks.items() %}
+{%- if task_cfg.TaskActivation not in act_set.vals %}
+{%- set act_set.vals = act_set.vals + [task_cfg.TaskActivation] %}
+{%- endif %}
+{%- endfor %}
+{%- for val in act_set.vals|sort %}
+      "{{val}}" = {{val}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CURRENTACTIVATIONS, "Current Activations";
+    ENUM [
+      "BASIC" = 0,
+      "EXTENDED" = 1
+    ] TASKTYPE, "Task Type";
+    ENUM [
+      "NON" = 0,
+      "FULL" = 1
+    ] SCHEDULE, "Task Schedule (Preemption)";
+    ENUM "unsigned int" [
+{%- set act_limit_set = namespace(vals=[]) %}
+{%- for task_name, task_cfg in tasks.items() %}
+{%- if task_cfg.TaskActivation not in act_limit_set.vals %}
+{%- set act_limit_set.vals = act_limit_set.vals + [task_cfg.TaskActivation] %}
+{%- endif %}
+{%- endfor %}
+{%- for val in act_limit_set.vals|sort %}
+      "{{val}}" = {{val}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] ACTIVATIONLIMIT, "Activation Limit";
+    ENUM [
+      "FALSE" = 0,
+      "TRUE" = 1
+    ] AUTOSTART, "Autostart";
+    ENUM "unsigned int" [
+      "0" = 0,
+{%- set stack_size_set = namespace(vals=[]) %}
+{%- for task_name, task_cfg in tasks.items() %}
+{%- if task_cfg.TaskStackSize not in stack_size_set.vals %}
+{%- set stack_size_set.vals = stack_size_set.vals + [task_cfg.TaskStackSize] %}
+{%- endif %}
+{%- endfor %}
+{%- for stack_size in stack_size_set.vals|sort %}
+      "{{stack_size}}" = {{stack_size}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CONFIGUREDSTACKSIZE, "Configured Stack Size (Bytes)";
+    ENUM "unsigned int" [
+{%- for task_name in task_id_order %}
+      "Stack_{{task_name}}" : Stack_{{task_name}} = "{{loop.index0}}"{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] STACK, "Task Stack";
+    ENUM "unsigned int" [
+{%- for task_name in task_id_order %}
+      "os_task_cfg_ref_table[{{loop.index0}}]" : os_task_cfg_ref_table = "{{loop.index0}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ] CONFIGREF, "Config Structure";
+  }, "Tasks";
+  ISR2 {
+    ENUM [
+{%- for core_id in range(core_cnt) %}
+      "Core{{core_id}}" = "{{core_id}}"{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CORE_ID, "Core ID";
+    ENUM "unsigned int" [
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+      "{{cfg_idx}}" = {{cfg_idx}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] ISR_ID, "ISR ID";
+    ENUM [
+      "CATEGORY_2" = 0
+    ] CATEGORY, "ISR Category";
+    ENUM "unsigned int" [
+{%- set isr_prio_set = namespace(vals=[]) %}
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+{%- if isr_cfg.IsrIntPriority not in isr_prio_set.vals %}
+{%- set isr_prio_set.vals = isr_prio_set.vals + [isr_cfg.IsrIntPriority] %}
+{%- endif %}
+{%- endfor %}
+{%- for pval in isr_prio_set.vals|sort(reverse=true) %}
+      "{{pval}}" = {{pval}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] PRIORITY, "ISR Priority";
+    ENUM "unsigned int" [
+{%- set isr_source_set = namespace(vals=[]) %}
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+{%- if isr_cfg.IsrIntSource not in isr_source_set.vals %}
+{%- set isr_source_set.vals = isr_source_set.vals + [isr_cfg.IsrIntSource] %}
+{%- endif %}
+{%- endfor %}
+{%- for source in isr_source_set.vals|sort %}
+      "{{source}}" = {{source}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] INTERRUPT_SOURCE, "Interrupt Source";
+  STRING HANDLER_FUNCTION, "Handler Function";
+  CTYPE "void *" HANDLER_ENTRY, "Handler Entry Address";
+    CTYPE "unsigned int *" STACK_BASE_ADDRESS, "Stack Base Address";
+    CTYPE "unsigned int" STACK_SIZE, "Stack Size (Bytes)";
+    ENUM "unsigned int" [
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+      "os_isr_cfg_ref_table[{{cfg_idx}}]" : os_isr_cfg_ref_table = "{{cfg_idx}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ] CONFIGREF, "Config Structure";
+  }, "ISR2s";
+  STACK {
+    ENUM [
+{%- for core_id in range(core_cnt) %}
+      "Core{{core_id}}" = "{{core_id}}"{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CORE_ID, "Core ID";
+    CTYPE SIZE, "Stack Size (Bytes)";
+    CTYPE "unsigned int *" BASEADDRESS, "Stack Base Address";
+    STRING STACKDIRECTION, "Stack Growth Direction";
+    CTYPE "unsigned int" FILLPATTERN, "Stack Fill Pattern";
+  }, "Stacks";
+{%- if resources %}
+  RESOURCE {
+    CTYPE "unsigned int" CEILING_PRIORITY, "Ceiling Priority";
+    ENUM [
+      "FREE" = 0,
+      "OCCUPIED" = 1
+    ] STATE, "Resource State";
+    ENUM "unsigned int" [
+{%- for res_name, res_cfg in resources.items() %}
+      "os_resource_cfg_ref_table[{{loop.index0}}]" : os_resource_cfg_ref_table = "{{loop.index0}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ] CONFIGREF, "Config Structure";
+  }, "Resources";
+{%- endif %}
+{%- if spinlocks %}
+  SPINLOCK {
+    ENUM [
+      "UNLOCKED" = 0,
+      "LOCKED" = 1
+    ] STATE, "Spinlock State";
+    ENUM "unsigned int" [
+{%- for spin_name, spin_cfg in spinlocks.items() %}
+      "os_spinlock_cfg_ref_table[{{loop.index0}}]" : os_spinlock_cfg_ref_table = "{{loop.index0}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ] CONFIGREF, "Config Structure";
+  }, "Spinlocks";
+{%- endif %}
+{%- if alarms %}
+  ALARM {
+    ENUM [
+      "STOPPED" = 0,
+      "RUNNING" = 1
+    ] STATE, "Alarm State";
+    CTYPE "unsigned int" ALARMTIME, "Alarm Time";
+    CTYPE "unsigned int" CYCLETIME, "Cycle Time";
+  }, "Alarms";
+{%- endif %}
+{%- if schedtables %}
+  SCHEDULETABLE {
+    ENUM [
+{%- for core_id in range(core_cnt) %}
+      "Core{{core_id}}" = "{{core_id}}"{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] CORE_ID, "Core ID";
+    ENUM [
+      "STOPPED" = 0,
+      "NEXT" = 1,
+      "WAITING" = 2,
+      "RUNNING" = 3,
+      "RUNNING_AND_SYNCHRONOUS" = 4
+    ] STATE, "Schedule Table State";
+    ENUM "unsigned int" [
+{%- set dur_set = namespace(vals=[]) %}
+{%- for st_name, st_cfg in schedtables.items() %}
+{%- if st_cfg.OsScheduleTableDuration not in dur_set.vals %}
+{%- set dur_set.vals = dur_set.vals + [st_cfg.OsScheduleTableDuration] %}
+{%- endif %}
+{%- endfor %}
+{%- for val in dur_set.vals|sort %}
+      "{{val}}" = {{val}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] DURATION, "Duration (ticks)";
+    ENUM "unsigned int" [
+{%- set ep_cnt_set = namespace(vals=[]) %}
+{%- for st_name, st_cfg in schedtables.items() %}
+{%- set ep_cnt = st_cfg.OsScheduleTableExpiryPoint|length %}
+{%- if ep_cnt not in ep_cnt_set.vals %}
+{%- set ep_cnt_set.vals = ep_cnt_set.vals + [ep_cnt] %}
+{%- endif %}
+{%- endfor %}
+{%- for val in ep_cnt_set.vals|sort %}
+      "{{val}}" = {{val}}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+    ] EXPIRY_POINT_CNT, "Number of Expiry Points";
+    ENUM [
+      "SINGLE_SHOT" = 0,
+      "REPEATING" = 1
+    ] REPEATING, "Repeating Mode";
+    ENUM [
+      "NONE" = 0,
+      "EXPLICIT" = 1,
+      "IMPLICIT" = 2
+    ] SYNC_STRATEGY, "Synchronization Strategy";
+    ENUM "unsigned int" [
+{%- for st_name in schedtable_id_order %}
+      "os_schedtable_cfg_ref_table[{{loop.index0}}]" : os_schedtable_cfg_ref_table = "{{loop.index0}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+    ] CONFIGREF, "Config Structure";
+  }, "ScheduleTables";
+{%- endif %}
+};
+
+{#- ================================================================
+    INFORMATION SECTION — OS
+    TRACE32 reads the shared task-ID mirror directly. Do not derive this from
+    NuttX g_running_tasks: that symbol uses per-CPU storage and is not a shared
+    array that an ORTI expression can index reliably on every toolchain.
+    ================================================================ #}
+OS HaloOs {
+  vs_SMP_NUMCPU = "{{core_cnt}}";
+  vs_NUM_TASKS = "{{(task_id_order|length) + core_cnt}}";
+  vs_NUM_ISR2S = "{{cat2_isrs|length}}";
+  vs_NUM_ALARMS = "{{alarms|length}}";
+  vs_NUM_SCHEDTABLES = "{{schedtables|length}}";
+  vs_NUM_RESOURCES = "{{resources|length}}";
+  vs_NUM_SPINLOCKS = "{{spinlocks|length}}";
+{%- for core_id in range(core_cnt) %}
+  RUNNINGTASK[{{core_id}}] = "os_current_task_id[{{core_id}}]";
+{%- endfor %}
+  RUNNINGISR2 = "0xFFFF";
+};
+
+{#- ================================================================
+    INFORMATION SECTION — TASK instances
+    Access via os_task_cfg_ref_table[task_id] -> os_task_cfg_t*
+    ================================================================ #}
+{%- for task_name in task_id_order %}
+TASK {{task_name}} {
+  CORE_ID = "({{task_core_map.get(task_name, 0)}})";
+  PRIORITY = "os_task_cfg_ref_table[{{loop.index0}}]->base_priority";
+  STATE = "0";
+  CURRENTACTIVATIONS = "0";
+  TASKTYPE = "({% if tasks[task_name].TaskType == "EXTENDED" %}1{% else %}0{% endif %})";
+  SCHEDULE = "os_task_cfg_ref_table[{{loop.index0}}]->is_preemptive";
+  ACTIVATIONLIMIT = "os_task_cfg_ref_table[{{loop.index0}}]->activation_limit";
+  AUTOSTART = "os_task_cfg_ref_table[{{loop.index0}}]->autostart_mode";
+  CONFIGUREDSTACKSIZE = "({{tasks[task_name].TaskStackSize}})";
+  STACK = "({{loop.index0}})";
+  CONFIGREF = "({{loop.index0}})";
+};
+{%- endfor %}
+{%- for core_id in range(core_cnt) %}
+TASK CPU{{core_id}}_IDLE {
+  CORE_ID = "({{core_id}})";
+  PRIORITY = "(10)";
+  STATE = "0";
+  CURRENTACTIVATIONS = "0";
+  TASKTYPE = "(0)";
+  SCHEDULE = "(1)";
+  ACTIVATIONLIMIT = "(1)";
+  AUTOSTART = "(1)";
+  CONFIGUREDSTACKSIZE = "(0)";
+  STACK = "(0)";
+  CONFIGREF = "(0)";
+};
+{%- endfor %}
+
+{#- ================================================================
+    INFORMATION SECTION — ISR2 instances
+    Access via os_isr_cfg_ref_table[isr_id] -> os_isr_cfg_t*
+    ================================================================ #}
+{%- for isr_name, isr_cfg, core_id, cfg_idx in cat2_isrs %}
+ISR2 {{isr_name}} {
+  CORE_ID = "({{core_id}})";
+  ISR_ID = "({{cfg_idx}})";
+  CATEGORY = "(0)";
+  PRIORITY = "({{isr_cfg.IsrIntPriority}})";
+  INTERRUPT_SOURCE = "({{isr_cfg.IsrIntSource}})";
+  HANDLER_FUNCTION = "{{isr_cfg.IsrEntryFunc}}";
+  HANDLER_ENTRY = "(void *)&{{isr_cfg.IsrEntryFunc}}";
+{%- if cpu_core == "TriCore" %}
+  STACK_BASE_ADDRESS = "(unsigned int *)&__ISTACK{{core_id}}_END";
+  STACK_SIZE = "((unsigned int)&__ISTACK{{core_id}} - (unsigned int)&__ISTACK{{core_id}}_END)";
+{%- else %}
+  STACK_BASE_ADDRESS = "(unsigned int *)os_isr_cfg_ref_table[{{cfg_idx}}]->context.arch_ctx_cfg.stack_addr";
+  STACK_SIZE = "os_isr_cfg_ref_table[{{cfg_idx}}]->context.arch_ctx_cfg.stack_size";
+{%- endif %}
+  CONFIGREF = "({{cfg_idx}})";
+};
+{%- endfor %}
+
+{#- ================================================================
+    INFORMATION SECTION — STACK instances
+    Use the TCB-adjusted stack range so TLS/argv storage is excluded.
+    ================================================================ #}
+{%- for task_name in task_id_order %}
+STACK Stack_{{task_name}} {
+  CORE_ID = "({{task_core_map.get(task_name, 0)}})";
+  SIZE = "((os_task_inst_t*)os_task_cfg_ref_table[{{loop.index0}}]->context.instance)->thread.tcb.adj_stack_size";
+  BASEADDRESS = "(unsigned int *)((os_task_inst_t*)os_task_cfg_ref_table[{{loop.index0}}]->context.instance)->thread.tcb.stack_base_ptr";
+  STACKDIRECTION = "DOWN";
+  FILLPATTERN = "0xDEADBEEF";
+};
+{%- endfor %}
+
+{#- ================================================================
+    INFORMATION SECTION — RESOURCE instances
+    Access via os_resource_cfg_ref_table[res_id]
+    ================================================================ #}
+{%- if resources %}
+{%- for res_name, res_cfg in resources.items() %}
+RESOURCE {{res_name}} {
+  CEILING_PRIORITY = "os_resource_cfg_ref_table[{{loop.index0}}]->ceiling_priority";
+  STATE = "os_resource_cfg_ref_table[{{loop.index0}}]->obj_desc->is_occupied";
+  CONFIGREF = "({{loop.index0}})";
+};
+{%- endfor %}
+{%- endif %}
+
+{#- ================================================================
+    INFORMATION SECTION — SPINLOCK instances
+    Access via os_spinlock_cfg_ref_table[spin_id]
+    ================================================================ #}
+{%- if spinlocks %}
+{%- for spin_name, spin_cfg in spinlocks.items() %}
+SPINLOCK {{spin_name}} {
+  STATE = "os_spinlock_cfg_ref_table[{{loop.index0}}]->obj_desc->spin";
+  CONFIGREF = "({{loop.index0}})";
+};
+{%- endfor %}
+{%- endif %}
+
+{#- ================================================================
+    INFORMATION SECTION — ALARM instances
+    Access via os_alarm_cfg_ref_table[alarm_id] -> os_alarm_cfg_t*
+    ================================================================ #}
+{%- if alarms %}
+{%- for alarm_name in alarm_id_order %}
+ALARM {{alarm_name}} {
+  STATE = "os_alarm_cfg_ref_table[{{loop.index0}}]->obj_desc->alarm_state";
+  ALARMTIME = "os_alarm_cfg_ref_table[{{loop.index0}}]->obj_desc->hrtimer.expiration_time";
+  CYCLETIME = "os_alarm_cfg_ref_table[{{loop.index0}}]->obj_desc->cycle";
+};
+{%- endfor %}
+{%- endif %}
+
+{#- ================================================================
+    INFORMATION SECTION — SCHEDULETABLE instances
+    Access via os_schedtable_cfg_ref_table[st_id] -> os_schedtable_cfg_t*
+    ================================================================ #}
+{%- if schedtables %}
+{%- for st_name in schedtable_id_order %}
+{%- set st_cfg = schedtables[st_name] %}
+{%- set st_ns = namespace(core_id=0) %}
+{%- for app_name, app_info in apps.items() %}
+{%- if st_name in app_info.get("AppScheduleTableList", []) %}
+{%- set st_ns.core_id = app_info.CoreNumber %}
+{%- endif %}
+{%- endfor %}
+SCHEDULETABLE {{st_name}} {
+  CORE_ID = "({{st_ns.core_id}})";
+  STATE = "os_schedtable_cfg_ref_table[{{loop.index0}}]->instance->state";
+  DURATION = "({{st_cfg.OsScheduleTableDuration}})";
+  EXPIRY_POINT_CNT = "({{st_cfg.OsScheduleTableExpiryPoint|length}})";
+  REPEATING = "({% if st_cfg.OsScheduleTableRepeating %}1{% else %}0{% endif %})";
+  SYNC_STRATEGY = "({% if st_cfg.OsScheduleTableSync.get("OsScheduleTblSyncStrategy", "NONE") == "EXPLICIT" %}1{% elif st_cfg.OsScheduleTableSync.get("OsScheduleTblSyncStrategy", "NONE") == "IMPLICIT" %}2{% else %}0{% endif %})";
+  CONFIGREF = "({{loop.index0}})";
+};
+{%- endfor %}
+{%- endif %}

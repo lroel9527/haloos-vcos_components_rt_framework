@@ -32,6 +32,9 @@
 #if defined(CONFIG_RT_FRAMEWORK_COUNTER) && (CONFIG_RT_FRAMEWORK_COUNTER == 1)
 #include "rtfw_counter.h"
 #endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm_internal.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_IOC) && (CONFIG_RT_FRAMEWORK_IOC == 1)
 #include "rtfw_ioc.h"
 #endif
@@ -501,6 +504,53 @@ static void sys_vservice_error_report(syscall_data_t *syscall_data, uint32_t *re
 
 #endif /* CONFIG_RT_FRAMEWORK_COUNTER */
 
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+static void sys_get_alarm_base(syscall_data_t *syscall_data, uint32_t *regs)
+{
+	(void)regs;
+
+	syscall_data->syscall_return_value.return_os_status =
+		os_get_alarm_base(syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_2].param_alarm_base_ref_type);
+}
+
+static void sys_get_alarm(syscall_data_t *syscall_data, uint32_t *regs)
+{
+	(void)regs;
+
+	syscall_data->syscall_return_value.return_os_status =
+		os_get_alarm(syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_ref_type);
+}
+
+static void sys_set_rel_alarm(syscall_data_t *syscall_data, uint32_t *regs)
+{
+	(void)regs;
+
+	syscall_data->syscall_return_value.return_os_status =
+		os_set_rel_alarm(syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_t,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_3].param_tick_t);
+}
+
+static void sys_set_abs_alarm(syscall_data_t *syscall_data, uint32_t *regs)
+{
+	(void)regs;
+
+	syscall_data->syscall_return_value.return_os_status =
+		os_set_abs_alarm(syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_t,
+		syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_3].param_tick_t);
+}
+
+static void sys_cancel_alarm(syscall_data_t *syscall_data, uint32_t *regs)
+{
+	(void)regs;
+
+	syscall_data->syscall_return_value.return_os_status =
+		os_cancel_alarm(syscall_data->syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type);
+}
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #if defined(CONFIG_RT_FRAMEWORK_IOC) && (CONFIG_RT_FRAMEWORK_IOC == 1)
 static void sys_ioc_send(syscall_data_t *syscall_data, uint32_t *regs)
 {
@@ -627,6 +677,13 @@ static VAR(syscall_entry_t, OS_CONST) os_syscall_table[] = {
 	[OS_SYSCALLID_GETELAPSEDVALUE] = sys_get_elapsed_value,
 	[OS_SYSCALLID_INCREMENTCOUNTER] = sys_increase_counter,
 #endif /* CONFIG_RT_FRAMEWORK_COUNTER */
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+	[OS_SYSCALLID_GETALARMBASE] = sys_get_alarm_base,
+	[OS_SYSCALLID_GETALARM] = sys_get_alarm,
+	[OS_SYSCALLID_SETRELALARM] = sys_set_rel_alarm,
+	[OS_SYSCALLID_SETABSALARM] = sys_set_abs_alarm,
+	[OS_SYSCALLID_CANCELALARM] = sys_cancel_alarm,
+#endif /* CONFIG_RT_FRAMEWORK_ALARM */
 #ifdef CONFIG_RT_FRAMEWORK_ERROR
 	[OS_SYSCALLID_SERVICEERRORREPORT] = sys_vservice_error_report,
 #endif /* CONFIG_RT_FRAMEWORK_ERROR */

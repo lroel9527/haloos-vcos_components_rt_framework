@@ -19,7 +19,7 @@ from durable.engine import *
 from .Os_ruleutils import OsRuleutils
 
 class Os001003Rule(BasicRule):
-    """Application/Task/Counter/Event/Resource/Isr/IOC/spinlock/ScheduleTable不允许重名"""
+    """Alarm/Application/Task/Counter/Event/Resource/Isr/IOC/spinlock/ScheduleTable不允许重名"""
     ruleset_name = "Os001003"
     validation_result = False
 
@@ -28,7 +28,7 @@ class Os001003Rule(BasicRule):
         self.logs = logs
         self.ecuc_os_dict = validation_data.bsw_ecuc_dict['Os']['ArPackages']['ActiveEcuC']['Os']
         self.validation_code = self.__class__.ruleset_name
-        self.validation_summary = "No repeat of subcontainer name of Application/Task/Counter/Event/Resource/Isr/spinlock/ScheduleTable"
+        self.validation_summary = "No repeat of subcontainer name of Alarm/Application/Task/Counter/Event/Resource/Isr/spinlock/ScheduleTable"
         self.durable_init()
 
     def durable_init(self):
@@ -44,6 +44,7 @@ class Os001003Rule(BasicRule):
 
     @timing_decorator
     def validation_run(self):
+        alarm_name_dict = list(OsRuleutils().get_module_cfg("OsAlarm",self.ecuc_os_dict).keys())
         app_name_dict = list(OsRuleutils().get_module_cfg("OsApplication",self.ecuc_os_dict).keys())
         task_name_dict = list(OsRuleutils().get_module_cfg("OsTask",self.ecuc_os_dict).keys())
         counter_name_dict = list(OsRuleutils().get_module_cfg("OsCounter",self.ecuc_os_dict).keys())
@@ -55,6 +56,7 @@ class Os001003Rule(BasicRule):
         schedtable_name_dict = list(OsRuleutils().get_module_cfg("OsScheduleTable",self.ecuc_os_dict).keys())
         validation_data = {}
         param_path = "/ActiveEcuC/Os/"
+        validation_data.update({"alarm": alarm_name_dict})
         validation_data.update({"application": app_name_dict})
         validation_data.update({"task": task_name_dict})
         validation_data.update({"counter": counter_name_dict})

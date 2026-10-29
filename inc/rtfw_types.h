@@ -22,6 +22,10 @@
 #include "Os_Types.h"
 #include <stddef.h>
 #include <stdint.h>
+#include "rtfw_compiler_cfg.h"
+
+#define RTFW_CODE locate_code(OS_CODE_SECTION)
+#define RTFW_CONST locate_data(OS_CONST_SECTION)
 
 typedef int16_t isr_id_t;
 
@@ -111,14 +115,18 @@ typedef uint32_t os_status_t;
 #define OS_STATUS_VALUE_TOO_HIGH_1         (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 1u))
 /* 参数2中给定的值过高 */
 #define OS_STATUS_VALUE_TOO_HIGH_2         (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 2u))
+/* 参数3中给定的值过高 */
+#define OS_STATUS_VALUE_TOO_HIGH_3         (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 3u))
 /* 参数1中给定的值超出了范围 */
-#define OS_STATUS_VALUE_OUT_OF_RANGE_1     (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 3u))
+#define OS_STATUS_VALUE_OUT_OF_RANGE_1     (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 4u))
 /* 参数2中给定的值超出了范围 */
-#define OS_STATUS_VALUE_OUT_OF_RANGE_2     (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 4u))
+#define OS_STATUS_VALUE_OUT_OF_RANGE_2     (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 5u))
 /* 参数1中给定的值过低 */
-#define OS_STATUS_VALUE_TOO_LOW_1          (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 5u))
+#define OS_STATUS_VALUE_TOO_LOW_1          (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 6u))
 /* 参数2中给定的值过低 */
-#define OS_STATUS_VALUE_TOO_LOW_2          (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 6u))
+#define OS_STATUS_VALUE_TOO_LOW_2          (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 7u))
+/* 参数3中给定的值过低 */
+#define OS_STATUS_VALUE_TOO_LOW_3          (OS_STATUS_TYPE_CONVERSION(E_OS_VALUE, 8u))
 
 /* AUTOSAR OS Error Classification */
 #define OS_STATUS_SERVICEID                ((os_status_t)E_OS_SERVICEID)

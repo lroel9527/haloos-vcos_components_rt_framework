@@ -27,6 +27,13 @@
 #include "rtfw_counter.h"
 #endif
 
+#if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
+#include "rtfw_schedtable_internal.h"
+#endif
+
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_HOOK) && (CONFIG_RT_FRAMEWORK_HOOK == 1)
 #include "rtfw_hook_internal.h"
 #endif
@@ -72,6 +79,11 @@ FUNC(void, OS_CODE) os_app_init(const os_app_cfg_t *const os_app_cfg_table[], Os
 #if defined(CONFIG_RT_FRAMEWORK_SCHTBL) && (CONFIG_RT_FRAMEWORK_SCHTBL == 1)
 		if ((app_cfg->scht_refs != NULL_PTR) && (app_cfg->scht_count != NULL_PTR)) {
 			os_schedule_table_init(app_cfg->scht_refs, *(app_cfg->scht_count));
+		}
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+		if ((app_cfg->alarm_refs != NULL_PTR) && (app_cfg->alarm_count != NULL_PTR)) {
+			os_alarm_init(app_cfg->alarm_refs, *(app_cfg->alarm_count));
 		}
 #endif
 #if defined(CONFIG_RT_FRAMEWORK_HOOK) && (CONFIG_RT_FRAMEWORK_HOOK == 1)
@@ -173,6 +185,13 @@ FUNC(ApplicationType, OS_CODE) os_check_object_ownership(ObjectTypeType object_t
 		case OBJECT_COUNTER:
 			if ((CounterType)object_id < (CounterType)os_counter_cfg_ref_table_size) {
 				rv = GET_APP_CFG_BY_COUNTER_ID((CounterType)object_id)->app_id;
+			}
+			break;
+#endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+		case OBJECT_ALARM:
+			if ((AlarmType)object_id < os_alarm_cfg_ref_table_size) {
+				rv = GET_APP_CFG_BY_ALARM_ID((AlarmType)object_id)->app_id;
 			}
 			break;
 #endif

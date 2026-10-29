@@ -22,6 +22,7 @@
 #include "rtfw_isr.h"
 #include "isr_cfg.h"
 #include "rtfw_error.h"
+#include "rtfw_trace.h"
 
 /* Local Function Implementation */
 
@@ -96,6 +97,7 @@ FUNC(void, OS_CODE) os_disable_all_interrupts(void)
 
 	__os_int_suspend_cat1(&(this_int_state->int_level_state_cat1));
 	__os_int_set_disable_all_state(&(this_int_state->int_disable_all_state));
+	OS_TRACE_DISABLE_ALL_INTERRUPT();
 }
 
 FUNC(void, OS_CODE) os_enable_all_interrupts(void)
@@ -107,6 +109,7 @@ FUNC(void, OS_CODE) os_enable_all_interrupts(void)
 		return;
 	}
 
+	OS_TRACE_ENABLE_ALL_INTERRUPT();
 	__os_int_set_enable_all_state(&(this_int_state->int_disable_all_state));
 	__os_int_resume_cat1(&(this_int_state->int_level_state_cat1));
 }
@@ -127,6 +130,7 @@ FUNC(void, OS_CODE) os_suspend_all_interrupts(void)
 		__os_int_suspend_cat1(&(this_int_state->int_level_state_cat1));
 		this_int_state->int_suspend_cat2_record = this_int_state->int_suspend_cat2_cnt;
 		this_int_state->int_suspend_cat1_cnt = 1u;
+		OS_TRACE_SUSPEND_ALL_INTERRUPT();
 	} else {
 		++int_suspend_cnt;
 		if (UNLIKELY(int_suspend_cnt == 0u)) {
@@ -150,6 +154,7 @@ FUNC(void, OS_CODE) os_resume_all_interrupts(void)
 	if (LIKELY(int_suspend_cnt == 1u)) {
 		this_int_state->int_suspend_cat1_cnt = 0u;
 		if (LIKELY(this_int_state->int_suspend_cat2_record == this_int_state->int_suspend_cat2_cnt)) {
+			OS_TRACE_RESUME_ALL_INTERRUPT();
 			__os_int_resume_cat1(&(this_int_state->int_level_state_cat1));
 		} else {
 			REPORT_SERVICE_ERROR(OSServiceId_ResumeAllInterrupts, OS_STATUS_INT_API_ORDER, 0);
@@ -174,6 +179,7 @@ FUNC(void, OS_CODE) os_suspend_os_interrupts(void)
 		__os_int_suspend_cat2(&(this_int_state->int_level_state_cat2));
 		this_int_state->int_suspend_cat1_record = this_int_state->int_suspend_cat1_cnt;
 		this_int_state->int_suspend_cat2_cnt = 1u;
+		OS_TRACE_SUSPEND_OS_INTERRUPT();
 	} else {
 		++int_suspend_cnt;
 		if (UNLIKELY(int_suspend_cnt == 0u)) {
@@ -197,6 +203,7 @@ FUNC(void, OS_CODE) os_resume_os_interrupts(void)
 	if (LIKELY(int_suspend_cnt == 1u)) {
 		this_int_state->int_suspend_cat2_cnt = 0u;
 		if (LIKELY(this_int_state->int_suspend_cat1_record == this_int_state->int_suspend_cat1_cnt)) {
+			OS_TRACE_RESUME_OS_INTERRUPT();
 			__os_int_resume_cat2(&(this_int_state->int_level_state_cat2));
 		} else {
 			REPORT_SERVICE_ERROR(OSServiceId_ResumeOSInterrupts, OS_STATUS_INT_API_ORDER, 0);
@@ -216,20 +223,24 @@ FUNC(boolean, OS_CODE) os_interrupt_is_disabled(void)
 FUNC(void, OS_CODE) os_int_suspend_kernel(irqlevel_t *const irq_level)
 {
 	*irq_level = up_kernel_int_save();
+	OS_TRACE_SUSPEND_KERNEL();
 }
 
 FUNC(void, OS_CODE) os_int_resume_kernel(const irqlevel_t *const irq_level)
 {
+	OS_TRACE_RESUME_KERNEL();
 	up_kernel_int_restore(*irq_level);
 }
 
 FUNC(void, OS_CODE) os_int_disable_global(void)
 {
 	up_irq_disable();
+	OS_TRACE_DISABLE_GLOBAL();
 }
 
 FUNC(void, OS_CODE) os_int_enable_global(void)
 {
+	OS_TRACE_ENABLE_GLOBAL();
 	up_irq_enable();
 }
 

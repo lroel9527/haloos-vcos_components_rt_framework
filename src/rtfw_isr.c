@@ -20,6 +20,7 @@
 #include "rtfw_core.h"
 #include <sched/sched.h>
 #include "rtfw_context_internal.h"
+#include "rtfw_trace.h"
 
 #if (CONFIG_ARCH_IRQ_NESTING_LIMIT > 1) && !defined(CONFIG_ARCH_HAVE_IRQ_PRIO_MASK_CONTEXT)
 static inline_function irqlevel_t os_pre_isr_prio_mask_save(uint32 irq_nesting, const os_ctx_cfg_t *pre_context)
@@ -50,7 +51,11 @@ FUNC(int, OS_CODE) rtfw_irq_handler(int irq, void *regs, void *arg)
 {
 	irqlevel_t irq_state;
 	uint8_t irq_nesting;
+	uint8_t trace_entry_nesting = 0U;
 	const os_isr_cfg_t *isr_cfg = (os_isr_cfg_t *)arg;
+
+	OS_TRACE_IRQ_HANDLER_ENTRY(isr_cfg, &trace_entry_nesting);
+
 	const os_ctx_cfg_t *this_context = NULL_PTR;
 #if (CONFIG_ARCH_IRQ_NESTING_LIMIT > 1) || defined(CONFIG_RT_FRAMEWORK_MEMORY_PROTECTION)
 	const os_ctx_cfg_t *pre_context = os_context_get_contexthdl();
@@ -133,10 +138,14 @@ FUNC(int, OS_CODE) rtfw_irq_handler(int irq, void *regs, void *arg)
 #endif /* CONFIG_RT_FRAMEWORK_CAT0_INT_IS_IRQ */
 #endif /* CONFIG_ARCH_IRQ_NESTING_LIMIT */
 
+	OS_TRACE_IRQ_HANDLER_EXIT(isr_cfg);
+
 #ifdef CONFIG_IRQ_USE_ARCH_DISPATCH
 	regs = up_irq_dispatch_exit(regs);
+	OS_TRACE_IRQ_HANDLER_COMPLETE(isr_cfg, trace_entry_nesting);
 	return (uintptr_t)regs;
 #else
+	OS_TRACE_IRQ_HANDLER_COMPLETE(isr_cfg, trace_entry_nesting);
 	return 0;
 #endif
 }

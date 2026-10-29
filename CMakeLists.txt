@@ -16,6 +16,8 @@
 
 if(CONFIG_RT_FRAMEWORK)
   set(CSRCS src/rtfw.c
+            src/rtfw_init.c
+            ${GENDATA_DIR}/Memmap/memory_table_cfg.c
             src/rtfw_task.c
             src/rtfw_thread.c
             src/rtfw_isr.c
@@ -42,6 +44,10 @@ if(CONFIG_RT_FRAMEWORK)
     list(APPEND CSRCS ${GENDATA_DIR}/Os/counter_cfg.c)
   endif()
 
+  if(CONFIG_RT_FRAMEWORK_ALARM)
+    list(APPEND CSRCS src/rtfw_alarm.c)
+    list(APPEND CSRCS ${GENDATA_DIR}/Os/alarm_cfg.c)
+  endif()
   if (CONFIG_RT_FRAMEWORK_SYSCALL)
     list(APPEND CSRCS src/rtfw_syscall.c)
   endif()
@@ -93,12 +99,27 @@ if(CONFIG_RT_FRAMEWORK)
     list(APPEND CSRCS src/rtfw_trap.c)
   endif()
 
+  if (CONFIG_ARTI_ENABLED)
+    add_compile_definitions(CONFIG_ARTI_ENABLED=1)
+    list(APPEND CSRCS src/rtfw_arti.c)
+  endif()
   set(INCLUDE_DIRS ${NUTTX_DIR}/sched
                    ${GENDATA_DIR}/Rte
                    ${CMAKE_CURRENT_LIST_DIR}/src
                    ${CMAKE_CURRENT_LIST_DIR}/inc
                    ${NUTTX_APPS_DIR}/components/include
                    ${NUTTX_APPS_DIR}/components/include/autosar)
+
+if (CONFIG_ARTI_ENABLED)
+  list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../../external/arti_t32)
+  if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    if(CONFIG_TRICORE_TOOLCHAIN_HIGHTEC OR CONFIG_TRICORE_TOOLCHAIN_GNU)
+      if(CONFIG_ARCH_TRICORE)
+        list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../../external/arti_t32/arti_t32_tc3xx_olda_hightec)
+      endif()
+    endif()
+  endif()
+endif()
 
   list(APPEND INCLUDE_DIRS ${NUTTX_APPS_DIR}/${APPS_DIR}/apps)
 
@@ -122,10 +143,19 @@ endif ()
   target_sources(rt_framework PRIVATE ${CSRCS})
   target_include_directories(rt_framework PRIVATE ${INCLUDE_DIRS} ${VENDOR_THIRD_PARTY_DRIVER_INCDIR})
 
+  if(CONFIG_ARTI_ENABLED)
+    # rtfw_arti.h exposes arti.h to generated RTE hooks and other consumers.
+    target_link_libraries(rt_framework PUBLIC arti_t32)
+  endif()
+
   if (CONFIG_IRQ_USE_ARCH_DISPATCH)
     if(CONFIG_ARCH_TRICORE)
       target_sources(nuttx PRIVATE ${GENDATA_DIR}/Os/tricore_irq_dispatch.c)
       target_include_directories(nuttx PRIVATE ${INCLUDE_DIRS} )
     endif()
+  endif()
+  
+  if (CONFIG_ARTI_ENABLED)
+    target_include_directories(drivers PRIVATE ${INCLUDE_DIRS} )
   endif()
 endif()

@@ -1,0 +1,70 @@
+{{get_copyright()}}
+/*!*********************************************************************************************************************
+ * @file        arti_cfg.h
+ * @brief       ARTI (AUTOSAR Run-Time Interface) module configuration
+ * @details     Generated from ECUC configuration. Do not edit manually.
+ * @date        {{get_generation_time_temp()}}
+ * @toolversion {{get_vcos_version_temp()}}
+ **********************************************************************************************************************/
+
+#ifndef ARTI_CFG_H
+#define ARTI_CFG_H
+
+/* --------------------------------------------------------------------------
+ * ARTI feature switches — derived from OsArti UI configuration.
+ * These macros are the authoritative ARTI configuration source.
+ * -------------------------------------------------------------------------- */
+{%- set arti = get_arti_cfg() %}
+{% if arti.enabled %}
+#define CONFIG_ARTI_ENABLED              1
+{% else %}
+/* #undef CONFIG_ARTI_ENABLED */
+{% endif %}
+{% if arti.task_trace %}
+#define CONFIG_ARTI_TASK_TRACE           1
+{% else %}
+/* #undef CONFIG_ARTI_TASK_TRACE */
+{% endif %}
+{% if arti.resource_trace %}
+#define CONFIG_ARTI_RESOURCE_TRACE       1
+{% else %}
+/* #undef CONFIG_ARTI_RESOURCE_TRACE */
+{% endif %}
+{% if arti.spinlock_trace %}
+#define CONFIG_ARTI_SPINLOCK_TRACE       1
+{% else %}
+/* #undef CONFIG_ARTI_SPINLOCK_TRACE */
+{% endif %}
+{% if arti.int_trace %}
+#define CONFIG_ARTI_INT_TRACE            1
+{% else %}
+/* #undef CONFIG_ARTI_INT_TRACE */
+{% endif %}
+{% if arti.cat2isr_trace %}
+#define CONFIG_ARTI_CAT2ISR_TRACE        1
+{% else %}
+/* #undef CONFIG_ARTI_CAT2ISR_TRACE */
+{% endif %}
+{% if arti.runnable_trace %}
+#define CONFIG_ARTI_RUNNABLE_TRACE       1
+{% else %}
+/* #undef CONFIG_ARTI_RUNNABLE_TRACE */
+{% endif %}
+
+/* --------------------------------------------------------------------------
+ * OS instance name
+ * Must match the SHORT-NAME of the <Os> element in ARXML.
+ * TRACE32 uses this to locate matching ARTI_TRACE_* macro names.
+ * -------------------------------------------------------------------------- */
+#define ARTI_OS_SHORT_NAME   HaloOs
+
+/* --------------------------------------------------------------------------
+ * Module version info
+ * -------------------------------------------------------------------------- */
+#define ARTI_VENDOR_ID         0u
+#define ARTI_MODULE_ID         0u
+#define ARTI_SW_MAJOR_VERSION  1u
+#define ARTI_SW_MINOR_VERSION  0u
+#define ARTI_SW_PATCH_VERSION  0u
+
+#endif /* ARTI_CFG_H */

@@ -32,6 +32,9 @@
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
 #include "rtfw_syscall_internal.h"
 #endif
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+#include "rtfw_alarm.h"
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_COUNTER) && (CONFIG_RT_FRAMEWORK_COUNTER == 1)
 #include "rtfw_counter.h"
 #endif
@@ -1150,7 +1153,7 @@ FUNC(StatusType, OS_CODE) GetResource(ResourceType resource_id)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_get_resource(resource_id);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1174,7 +1177,7 @@ FUNC(StatusType, OS_CODE) ReleaseResource(ResourceType resource_id)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_release_resource(resource_id);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1199,7 +1202,7 @@ FUNC(StatusType, OS_CODE) GetCounterValue(CounterType counter_id, TickRefType ti
 {
 	os_status_t status;
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_counter_get_value(counter_id, tick_value);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1223,7 +1226,7 @@ FUNC(StatusType, OS_CODE) GetElapsedValue(CounterType counter_id, TickRefType pr
 {
 	os_status_t status;
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_counter_get_elapsed_value(counter_id, pre_value, elapsed_value);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1249,7 +1252,7 @@ FUNC(StatusType, OS_CODE) IncrementCounter(CounterType counter_id)
 {
 	os_status_t status;
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_counter_increment(counter_id);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1270,6 +1273,131 @@ FUNC(StatusType, OS_CODE) IncrementCounter(CounterType counter_id)
 
 #endif
 
+#if defined(CONFIG_RT_FRAMEWORK_ALARM) && (CONFIG_RT_FRAMEWORK_ALARM == 1)
+FUNC(StatusType, OS_CODE) GetAlarmBase(AlarmType alarm_id, AlarmBaseRefType info)
+{
+	os_status_t status;
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	if (FALSE == syscall_is_required()) {
+#endif
+		status = os_get_alarm_base(alarm_id, info);
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	} else {
+		syscall_data_t syscall;
+
+		syscall.syscall_id = OS_SYSCALLID_GETALARMBASE;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type = (uint32)alarm_id;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_2].param_alarm_base_ref_type = (void *)info;
+
+		up_syscall(&syscall);
+
+		status = syscall.syscall_return_value.return_os_status;
+	}
+#endif
+	REPORT_SERVICE_ERROR(OSServiceId_GetAlarmBase, status, 2, (uintptr_t)alarm_id, (uintptr_t)info);
+	return (StatusType)status;
+}
+
+FUNC(StatusType, OS_CODE) GetAlarm(AlarmType alarm_id, TickRefType tick)
+{
+	os_status_t status;
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	if (FALSE == syscall_is_required()) {
+#endif
+		status = os_get_alarm(alarm_id, tick);
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	} else {
+		syscall_data_t syscall;
+
+		syscall.syscall_id = OS_SYSCALLID_GETALARM;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type = (uint32)alarm_id;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_ref_type = tick;
+
+		up_syscall(&syscall);
+
+		status = syscall.syscall_return_value.return_os_status;
+	}
+#endif
+	REPORT_SERVICE_ERROR(OSServiceId_GetAlarm, status, 2, (uintptr_t)alarm_id, (uintptr_t)tick);
+	return (StatusType)status;
+}
+
+FUNC(StatusType, OS_CODE) SetRelAlarm(AlarmType alarm_id, TickType increment, TickType cycle)
+{
+	os_status_t status;
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	if (FALSE == syscall_is_required()) {
+#endif
+		status = os_set_rel_alarm(alarm_id, increment, cycle);
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	} else {
+		syscall_data_t syscall;
+
+		syscall.syscall_id = OS_SYSCALLID_SETRELALARM;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type = (uint32)alarm_id;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_t = increment;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_3].param_tick_t = cycle;
+
+		up_syscall(&syscall);
+
+		status = syscall.syscall_return_value.return_os_status;
+	}
+#endif
+	REPORT_SERVICE_ERROR(OSServiceId_SetRelAlarm, status, 3, (uintptr_t)alarm_id, (uintptr_t)increment,
+			     (uintptr_t)cycle);
+	return (StatusType)status;
+}
+
+FUNC(StatusType, OS_CODE) SetAbsAlarm(AlarmType alarm_id, TickType start, TickType cycle)
+{
+	os_status_t status;
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	if (FALSE == syscall_is_required()) {
+#endif
+		status = os_set_abs_alarm(alarm_id, start, cycle);
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	} else {
+		syscall_data_t syscall;
+
+		syscall.syscall_id = OS_SYSCALLID_SETABSALARM;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type = (uint32)alarm_id;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_2].param_tick_t = start;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_3].param_tick_t = cycle;
+
+		up_syscall(&syscall);
+
+		status = syscall.syscall_return_value.return_os_status;
+	}
+#endif
+	REPORT_SERVICE_ERROR(OSServiceId_SetAbsAlarm, status, 3, (uintptr_t)alarm_id, (uintptr_t)start,
+			     (uintptr_t)cycle);
+	return (StatusType)status;
+}
+
+FUNC(StatusType, OS_CODE) CancelAlarm(AlarmType alarm_id)
+{
+	os_status_t status;
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	if (FALSE == syscall_is_required()) {
+#endif
+		status = os_cancel_alarm(alarm_id);
+#if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
+	} else {
+		syscall_data_t syscall;
+
+		syscall.syscall_id = OS_SYSCALLID_CANCELALARM;
+		syscall.syscall_param[OS_SYSCALLPARAMINDEX_1].param_alarm_type = (uint32)alarm_id;
+
+		up_syscall(&syscall);
+
+		status = syscall.syscall_return_value.return_os_status;
+	}
+#endif
+	REPORT_SERVICE_ERROR(OSServiceId_CancelAlarm, status, 1, (uintptr_t)alarm_id);
+	return (StatusType)status;
+}
+
+#endif
 #if defined(CONFIG_RT_FRAMEWORK_ERROR) && (CONFIG_RT_FRAMEWORK_ERROR == 1)
 FUNC(void, OS_CODE) service_error_report(OSServiceIdType service_id, os_status_t error_status, uint32 param_cnt, ...)
 {
@@ -1278,7 +1406,7 @@ FUNC(void, OS_CODE) service_error_report(OSServiceIdType service_id, os_status_t
 	va_start(args, param_cnt);
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		vservice_error_report(service_id, error_status, param_cnt, args);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1303,7 +1431,7 @@ FUNC(StatusType, OS_CODE) IocSend(IocIdType ioc_id, void const *data)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_ioc_send(ioc_id, data);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1328,7 +1456,7 @@ FUNC(StatusType, OS_CODE) IocReceive(IocIdType ioc_id, void *data)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_ioc_recv(ioc_id, data);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1353,7 +1481,7 @@ FUNC(StatusType, OS_CODE) IocEmptyQueue(IocIdType ioc_id)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_ioc_empty_queue(ioc_id);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1377,7 +1505,7 @@ FUNC(StatusType, OS_CODE) IocWrite(IocIdType ioc_id, void const *data)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_ioc_write(ioc_id, data);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
@@ -1402,7 +1530,7 @@ FUNC(StatusType, OS_CODE) IocRead(IocIdType ioc_id, void *data)
 	os_status_t status;
 
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)
-	if (syscall_is_required() == FALSE) {
+	if (FALSE == syscall_is_required()) {
 #endif
 		status = os_ioc_read(ioc_id, data);
 #if defined(CONFIG_RT_FRAMEWORK_SYSCALL) && (CONFIG_RT_FRAMEWORK_SYSCALL == 1)

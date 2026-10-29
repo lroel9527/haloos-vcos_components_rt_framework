@@ -35,6 +35,7 @@ def get_os_core_info(ecuc_dict: dict):
         hw_coreid = str(get_last_item(v['EcucCoreHwRef']['ValueRef'])[-1])
         ret['Os_Core' + coreid] = {
             'core_id': 'OS_CORE_ID_' + coreid,
+            'core_num': int(coreid),
             'PhyId': 'OS_CORE_PHYSICAL_ID_' + hw_coreid
         }
 
@@ -113,6 +114,15 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     render_os_template(template, output_dir, "stack_cfg.h", config)
 
     # ################################################## #
+    #    ALARM                                           #
+    # ################################################## #
+    template = env_ui.get_template("alarm_cfg.h.jinja2")
+    render_os_template(template, output_dir, "alarm_cfg.h", config)
+
+    template = env_ui.get_template("alarm_cfg.c.jinja2")
+    render_os_template(template, output_dir, "alarm_cfg.c", config)
+
+    # ################################################## #
     #    APPLICATION                                     #
     # ################################################## #
     template = env_ui.get_template("application_cfg.h.jinja2")
@@ -145,7 +155,7 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     template = env_ui.get_template("isr_cfg.c.jinja2")
     render_os_template(template, output_dir, "isr_cfg.c", config)
 
-    if sys_config['target'] == "AURIX2G_TC397":
+    if sys_config['target'] in ("AURIX2G_TC397", "AURIX2G_TC499N"):
         template = env_ui.get_template("tricore_irq_dispatch.c.jinja2")
         render_os_template(template, output_dir, "tricore_irq_dispatch.c", config)
 
@@ -212,10 +222,17 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     # ################################################## #
     #    MEMORY PROTECTION                               #
     # ################################################## #
-    template = env_ui.get_template("memory_protection_cfg.h.jinja2")
+    template = env_ui.get_template(
+        "memory_protection_cfg.h.jinja2" if sys_config['target'] == "AURIX2G_TC499N"
+        else "memory_protection_legacy_cfg.h.jinja2")
     render_os_template(template, output_dir, "memory_protection_cfg.h", config)
+    if sys_config['target'] == "AURIX2G_TC499N":
+        template = env_ui.get_template("memory_protection_lcfg.h.jinja2")
+        render_os_template(template, output_dir, "memory_protection_lcfg.h", config)
 
-    template = env_ui.get_template("memory_protection_cfg.c.jinja2")
+    template = env_ui.get_template(
+        "memory_protection_cfg.c.jinja2" if sys_config['target'] == "AURIX2G_TC499N"
+        else "memory_protection_legacy_cfg.c.jinja2")
     render_os_template(template, output_dir, "memory_protection_cfg.c", config)
 
     # ################################################## #
@@ -236,4 +253,13 @@ def generate_dynamic_code(sys_config: dict, config_dict: dict):
     template = env_ui.get_template("rt_framework.config.jinja2")
     render_os_template(template, output_dir, "rt_framework.config", config)
 
+    # ################################################## #
+    #    ARTI configuration and OS description          #
+    # ################################################## #
+    arti_enabled = context.Function.get_arti_cfg(config)["enabled"]
+    template = env_ui.get_template("arti_cfg.h.jinja2")
+    render_os_template(template, output_dir, "arti_cfg.h", config)
+    if arti_enabled:
+        template = env_ui.get_template("haloos.orti.jinja2")
+        render_os_template(template, output_dir, "haloos.orti", config)
     return True
